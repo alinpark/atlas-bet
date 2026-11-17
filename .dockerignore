@@ -11,3 +11,4 @@
 !ai-engine/pyproject.toml
 !ai-engine/app/
 !ai-engine/app/main.py
+!ai-engine/app/__init__.py
