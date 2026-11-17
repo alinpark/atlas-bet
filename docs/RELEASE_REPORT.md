@@ -3,7 +3,8 @@
 Statut : **V1 déployée sur ce PC, cotes et classements réels, bot Telegram réel.** Le
 modèle football a été validé hors échantillon et **ne bat pas le marché** : il reste
 UNVALIDATED, donc aucune suggestion réelle n'est envoyée (suivi paper silencieux à la place).
-Ce n'est pas un déploiement VPS.
+Déployé sur le VPS OVH le 17/11/2026 (`/srv/atlas-bet`, projet `atlas-bet`), à côté
+d'Atlas sans le modifier ([RUNBOOK](RUNBOOK.md), [audit](ATLAS_INFRA_AUDIT.md)).
 Preuves : [TEST_REPORT.md](TEST_REPORT.md).
 
 | Critère §10 | Statut | Preuve |
@@ -19,7 +20,7 @@ Preuves : [TEST_REPORT.md](TEST_REPORT.md).
 | Bot Telegram ou émulateur/outbox | FAIT | 10 commandes, 4 boutons, saisie guidée, outbox avec reprise ; 3 notifications reçues sur le vrai bot le 17/11/2026 |
 | Suivi manuel exclusivement et plafonds testés | FAIT | Registre unique PostgreSQL, test de concurrence, smoke étapes 5 à 8 |
 | Revue Claude réalisée ou impossibilité explicitée | FAIT | [CLAUDE_CHALLENGE.md](CLAUDE_CHALLENGE.md) |
-| Atlas intact, audit de réutilisation | PARTIEL | Aucun conteneur Atlas touché ; VPS non inspecté (aucun accès) |
+| Atlas intact, audit de réutilisation | FAIT | VPS audité ; déploiement isolé (procédure B) ; Atlas : 7 conteneurs, durées de fonctionnement et routage Tailscale inchangés |
 | Tests exécutés et preuves consignées | FAIT | 13 Python + 1 moteur + 31 backend, smoke 10/10 |
 | README, architecture, risques, runbook | FAIT | `README.md`, `docs/` |
 | Aucun stub critique ; intégrations absentes listées | FAIT | Liste ci-dessous |
@@ -41,11 +42,11 @@ Preuves : [TEST_REPORT.md](TEST_REPORT.md).
 ## Activations externes restantes
 
 1. ~~Clé The Odds API~~ et ~~token Telegram~~ : faits, configurés dans `.env` (non versionné).
-2. Hébergement permanent : le stack tourne sur ce PC tant que Docker est lancé.
+2. ~~Hébergement permanent~~ : fait, VPS OVH.
 3. ~~Classements réels~~ : faits pour la Ligue 1 (Elo football-data.co.uk).
 4. ~~Validation empirique~~ : faite pour le football ; résultat négatif. Une suggestion réelle
    exige un **meilleur modèle** (nouvelles données), pas un réglage.
 5. Tennis et basketball réels : aucune source de classements branchée.
-6. Audit du VPS Atlas et déploiement : non réalisés, aucun accès fourni.
+6. ~~Audit du VPS et déploiement~~ : faits le 17/11/2026.
 
 Aucun push, déploiement, appel payant, mise automatisée ni lecture de secret.

@@ -11,6 +11,7 @@ services:
   postgres:
     image: postgres:17-alpine
     init: true
+    restart: unless-stopped
     environment:
       POSTGRES_DB: atlas_bet
       POSTGRES_USER: atlas_bet
@@ -34,6 +35,7 @@ services:
         OFFLINE_WHEELS: ${OFFLINE_WHEELS:-0}
     image: atlas-bet-engine:local
     init: true
+    restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]

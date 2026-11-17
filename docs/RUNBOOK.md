@@ -15,7 +15,38 @@ API : http://127.0.0.1:18082/api/v1 (compte `admin` / `demo-admin-local`, démo 
 Émulateur Telegram : `POST /api/v1/admin/telegram/simulate`, messages produits :
 `GET /api/v1/admin/telegram/sent`.
 
-## Production locale ou VPS
+## Production : VPS OVH (déployé le 17/11/2026)
+
+| Élément | Valeur |
+|---|---|
+| Serveur | VPS OVH (Ubuntu 26.04, 4 vCPU, 8 Go), utilisateur `ubuntu` + sudo |
+| Dossier | `/srv/atlas-bet` (root, 750) ; `.env` en 600 root, jamais versionné |
+| Projet Compose | `atlas-bet` (volume `atlas-bet_db`, réseau `atlas-bet_default`) |
+| Port | `127.0.0.1:18082` uniquement (aucune exposition publique, pare-feu inchangé) |
+| Redémarrage | `restart: unless-stopped` sur les 3 services ; Docker activé au démarrage |
+| Atlas | Non touché : `/srv/atlas`, projet `atlas-prod`, `127.0.0.1:8088`, Tailscale serve |
+
+**Un seul bot à la fois** : le stack du PC est arrêté. Ne pas le relancer avec le même
+token Telegram (les deux instances se voleraient les messages et doubleraient les crédits
+The Odds API).
+
+```text
+$env:ATLAS_BET_VPS = 'ubuntu@<ip-du-vps>'   # une fois, hors dépôt
+scripts\deploy-vps.ps1                 # mise à jour (jar + images), .env serveur conservé
+scripts\deploy-vps.ps1 -WithEnv        # idem en remplaçant le .env du serveur par le local
+ssh -i $env:USERPROFILE\.ssh\atlas_ovh_ed25519 -o IdentitiesOnly=yes $env:ATLAS_BET_VPS
+sudo docker compose --project-directory /srv/atlas-bet logs -f backend
+sudo docker compose --project-directory /srv/atlas-bet ps
+```
+
+API depuis le PC, par tunnel SSH :
+`ssh -i … -o IdentitiesOnly=yes -L 18082:127.0.0.1:18082 $env:ATLAS_BET_VPS`, puis
+http://127.0.0.1:18082/api/v1 (mot de passe : `BET_ADMIN_PASSWORD` du `.env`).
+
+Sauvegarde sur le VPS : mêmes commandes que ci-dessous, préfixées par
+`sudo docker compose --project-directory /srv/atlas-bet`.
+
+## Production locale (PC)
 
 1. `copy .env.example .env` puis renseigner `BET_DB_PASSWORD`, `BET_ADMIN_PASSWORD`,
    `BET_ENGINE_TOKEN` (valeurs longues et aléatoires), Telegram et The Odds API si voulu.
