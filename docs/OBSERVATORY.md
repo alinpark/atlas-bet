@@ -87,3 +87,19 @@ reste en place. Les identifiants et ports des conteneurs atlas-prod sont compar�
 avant/après. Les sauvegardes sont dans `/srv/atlas-bet-backups/<date>` en accès root.
 En cas d'échec, conserver la sauvegarde et diagnostiquer avant toute restauration
 de base (celle-ci pourrait perdre des déclarations postérieures à la sauvegarde).
+
+## Vérification de livraison — 17 novembre 2026
+
+- Code déployé : `9ea5ad6` (master).
+- 14 tests Python, 1 test de contrat FastAPI, 53 tests Java/PostgreSQL : tous réussis.
+- Smoke Docker : 10 étapes réussies, dont redémarrage et conservation des données.
+- Interface vérifiée dans un navigateur : filtres, dossier de match, laboratoire,
+  journal ; rendu bureau et mobile (390 px). Aucun appel à un bookmaker depuis le navigateur.
+- VPS : migration V6 appliquée avec succès ; backend, moteur et PostgreSQL sains.
+- HTTP 200 : interface, script JS, santé, tableau de bord, laboratoire. Requête
+  non authentifiée vers l'observatoire refusée (401).
+- À la vérification : 9 matchs réels suivis, 3 DEMO ; fournisseurs cotes et classements UP,
+  API-Football NOT_CONFIGURED ; aucune observation prospective éligible encore enregistrée.
+- Sauvegarde : `/srv/atlas-bet-backups/20261117T201636Z`, dump et manifeste vérifiés.
+- Identifiants et ports des sept conteneurs atlas-prod identiques avant/après.
+- Stack de smoke local arrêté après vérification ; aucune seconde instance du bot réel lancée.
