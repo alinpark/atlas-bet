@@ -5,3 +5,6 @@ __pycache__/
 !.env.example
 backend/target/
 ai-engine/wheels/
+# Réglages propres à un poste (certificat d'antivirus, etc.)
+compose.override.yaml
+local/

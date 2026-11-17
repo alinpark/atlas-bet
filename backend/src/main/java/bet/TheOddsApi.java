@@ -43,18 +43,52 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     private final String key;
     private final List<String> competitions;
     private final String baseUrl;
+    private final Duration oddsInterval;
+    private final Duration scoresInterval;
+    private final int quotaFloor;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
+    /**
+     * Budget de crédits : chaque compétition n'est interrogée qu'une fois par oddsInterval,
+     * les scores au plus une fois par scoresInterval, et plus rien n'est appelé quand le
+     * quota restant annoncé par l'API descend au plancher.
+     */
     public TheOddsApi(JdbcTemplate db, ObjectMapper json,
                       @Value("${bet.odds.api-key:}") String key,
                       @Value("${bet.odds.competitions:}") String competitions,
-                      @Value("${bet.odds.base-url:https://api.the-odds-api.com}") String baseUrl) {
+                      @Value("${bet.odds.base-url:https://api.the-odds-api.com}") String baseUrl,
+                      @Value("${bet.odds.min-interval-minutes:120}") long oddsMinutes,
+                      @Value("${bet.odds.scores-interval-minutes:720}") long scoresMinutes,
+                      @Value("${bet.odds.quota-floor:20}") int quotaFloor) {
         this.db = db;
         this.json = json;
         this.key = key.strip();
         this.competitions = Arrays.stream(competitions.split(",")).map(String::strip)
             .filter(value -> value.matches("(soccer|tennis|basketball)_[a-z0-9_]+")).toList();
         this.baseUrl = baseUrl;
+        this.oddsInterval = Duration.ofMinutes(Math.max(15, oddsMinutes));
+        this.scoresInterval = Duration.ofMinutes(Math.max(60, scoresMinutes));
+        this.quotaFloor = Math.max(0, quotaFloor);
+    }
+
+    /** Vrai si l'appel est permis : délai écoulé depuis le dernier appel et quota au-dessus du plancher. */
+    private boolean due(String slot, Duration interval, Instant now) {
+        var last = db.queryForList("SELECT value FROM app_setting WHERE key=?", String.class, slot);
+        if (!last.isEmpty() && Instant.parse(last.getFirst()).plus(interval).isAfter(now)) {
+            return false;
+        }
+        Integer remaining = db.query("SELECT quota_remaining FROM provider_health WHERE id=?",
+            rs -> rs.next() ? (Integer) rs.getObject(1) : null, SOURCE);
+        if (remaining != null && remaining <= quotaFloor) {
+            health("QUOTA_LOW", "Crédits restants " + remaining + " ≤ plancher " + quotaFloor, null, null, null);
+            return false;
+        }
+        return true;
+    }
+
+    private void spent(String slot, Instant now) {
+        db.update("INSERT INTO app_setting VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value",
+            slot, now.toString());
     }
 
     @Override
@@ -77,6 +111,11 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         }
         List<OddsEvent> events = new ArrayList<>();
         for (String competition : competitions) {
+            String slot = "odds_last:" + competition;
+            if (!due(slot, oddsInterval, now)) {
+                continue;
+            }
+            spent(slot, now);
             String path = "/v4/sports/" + competition + "/odds?regions=fr&markets=h2h&oddsFormat=decimal&dateFormat=iso";
             JsonNode body = call(path);
             if (body == null) {
@@ -105,6 +144,11 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         }
         List<Result> results = new ArrayList<>();
         for (String competition : sports) {
+            String slot = "scores_last:" + competition;
+            if (!due(slot, scoresInterval, now)) {
+                continue;
+            }
+            spent(slot, now);
             JsonNode body = call("/v4/sports/" + competition + "/scores?daysFrom=3&dateFormat=iso");
             if (body != null) {
                 results.addAll(parseScores(body, wanted, now));

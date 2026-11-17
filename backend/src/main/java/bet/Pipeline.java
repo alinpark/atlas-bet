@@ -48,7 +48,7 @@ public class Pipeline {
     private final RiskService risk;
     private final TelegramOutbox outbox;
     private final Reports reports;
-    private final String oddsProvider;
+    private final java.util.Set<String> oddsSources;
 
     public Pipeline(JdbcTemplate db, ObjectMapper json, TransactionTemplate tx,
                     List<Providers.OddsProvider> oddsProviders, List<Providers.ResultsProvider> resultsProviders,
@@ -65,7 +65,17 @@ public class Pipeline {
         this.risk = risk;
         this.outbox = outbox;
         this.reports = reports;
-        this.oddsProvider = "theoddsapi".equalsIgnoreCase(oddsProvider) ? TheOddsApi.SOURCE : FixtureProviders.SOURCE;
+        // Liste séparée par des virgules : fixture, theoddsapi ou les deux.
+        java.util.Set<String> sources = new java.util.LinkedHashSet<>();
+        for (String name : oddsProvider.split(",")) {
+            switch (name.strip().toLowerCase()) {
+                case "theoddsapi" -> sources.add(TheOddsApi.SOURCE);
+                case "fixture" -> sources.add(FixtureProviders.SOURCE);
+                case "" -> { }
+                default -> throw new IllegalStateException("ODDS_PROVIDER inconnu : " + name.strip());
+            }
+        }
+        this.oddsSources = sources.isEmpty() ? java.util.Set.of(FixtureProviders.SOURCE) : sources;
     }
 
     /** Exécute un cycle complet sous bail exclusif (une seule instance à la fois). */
@@ -97,13 +107,17 @@ public class Pipeline {
     }
 
     int collect(Instant now) {
-        var provider = oddsProviders.stream().filter(p -> p.name().equals(oddsProvider)).findFirst().orElseThrow();
         int stored = 0;
-        for (OddsEvent event : provider.fetch(now)) {
-            if (!Providers.OUTCOMES.containsKey(event.sport()) || !event.observedAt().isBefore(event.startsAt())) {
+        for (var provider : oddsProviders) {
+            if (!oddsSources.contains(provider.name())) {
                 continue;
             }
-            stored += tx.execute(status -> store(event));
+            for (OddsEvent event : provider.fetch(now)) {
+                if (!Providers.OUTCOMES.containsKey(event.sport()) || !event.observedAt().isBefore(event.startsAt())) {
+                    continue;
+                }
+                stored += tx.execute(status -> store(event));
+            }
         }
         return stored;
     }
@@ -363,7 +377,8 @@ public class Pipeline {
             SELECT e.id, e.source, e.competition FROM event e
             WHERE e.status='SCHEDULED' AND e.starts_at < now() - interval '2 hours'
               AND e.starts_at > now() - interval '3 days'
-            """);
+              AND EXISTS (SELECT 1 FROM feature_snapshot f WHERE f.event_id=e.id)
+            """); // Résultat utile seulement pour un match prédit : pas de crédit dépensé sinon.
         for (var provider : resultsProviders) {
             for (Result result : provider.results(pending, now)) {
                 recordResult(result);
