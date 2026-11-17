@@ -1,0 +1,39 @@
+name: atlas-bet
+x-container: &container
+  image: atlas-bet-cli
+  build: .
+  volumes:
+    - ledger:/data
+  mem_limit: 128m
+  cpus: 0.5
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+services:
+  cli:
+    <<: *container
+    environment:
+      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-}
+      SPORTS_ODDS_COMPETITIONS: ${SPORTS_ODDS_COMPETITIONS:-}
+  collector:
+    <<: *container
+    profiles: [collect]
+    entrypoint: [python, -m, worker, collect]
+    command: []
+    restart: unless-stopped
+    environment:
+      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-}
+      SPORTS_ODDS_COMPETITIONS: ${SPORTS_ODDS_COMPETITIONS:-}
+      SPORTS_COLLECT_INTERVAL: ${SPORTS_COLLECT_INTERVAL:-900}
+  telegram:
+    <<: *container
+    profiles: [telegram]
+    entrypoint: [python, -m, worker, telegram]
+    command: []
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
+volumes:
+  ledger:
