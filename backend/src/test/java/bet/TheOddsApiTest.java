@@ -30,7 +30,7 @@ class TheOddsApiTest {
         {"name":"Lyon","price":2.1},{"name":"Nantes","price":3.6},{"name":"Draw","price":3.3}""";
 
     @Test
-    void keepsOnlyCompleteFreshFrenchMarkets() throws Exception {
+    void keepsCompleteFreshFrenchMarketsAndPinnacleReference() throws Exception {
         var events = TheOddsApi.parseOdds(body(String.join(",",
             book("winamax_fr", "2026-11-17T11:58:00Z", FULL),
             book("pinnacle", "2026-11-17T11:58:00Z", FULL),
@@ -43,8 +43,8 @@ class TheOddsApiTest {
         var event = events.getFirst();
         assertEquals("odds-api:ev1", event.eventId());
         assertEquals("soccer", event.sport());
-        assertEquals(3, event.prices().size());
-        assertTrue(event.prices().stream().allMatch(price -> price.bookmaker().equals("winamax_fr")));
+        assertEquals(6, event.prices().size());
+        assertEquals(Set.of("winamax_fr","pinnacle"),Set.copyOf(event.prices().stream().map(Providers.OddsPrice::bookmaker).toList()));
         assertEquals(Set.of("home", "draw", "away"),
             Set.copyOf(event.prices().stream().map(Providers.OddsPrice::outcome).toList()));
     }

@@ -24,6 +24,15 @@ API : http://127.0.0.1:18082/api/v1 — OpenAPI : `/v3/api-docs` (compte de dém
 `admin` / `demo-admin-local`). En démo, Telegram passe par un émulateur
 (`POST /admin/telegram/simulate`, `GET /admin/telegram/sent`).
 
+## Observatoire web
+
+http://127.0.0.1:18082/ avec la même authentification : Aujourd'hui, dossiers de match,
+journal des engagements et laboratoire PAPER Ligue 1. L'expérience prospective
+FR/Pinnacle dure 90 jours, sans promotion automatique ni nouvelle alerte de mise.
+Les clôtures manquantes et raisons d'abstention sont visibles. La collecte est ciblée
+autour des matchs, plafonnée à 400 crédits réservés par mois.
+Voir [le protocole, les limites et l'accès VPS](docs/OBSERVATORY.md).
+
 ## Passer en réel
 
 Copier `.env.example` en `.env`, renseigner les secrets, puis `scripts\prepare-build.ps1`

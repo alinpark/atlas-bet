@@ -49,6 +49,29 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     /** Instant logique du cycle en cours (horloge injectable pour les tests). */
     private volatile Instant quotaReadAt = Instant.now();
+    @Value("${bet.odds.adaptive:true}")
+    boolean adaptive;
+    @Value("${bet.odds.monthly-budget:400}")
+    int monthlyBudget=400;
+
+    /** Réservation conservatrice persistante : erreurs réseau comptées, tous les appels inclus. */
+    private boolean reserve(int credits, Instant at) {
+        String month=java.time.YearMonth.from(at.atZone(java.time.ZoneOffset.UTC)).toString();
+        int reserved=db.update("""
+            INSERT INTO collection_budget(month,reserved) SELECT ?,? WHERE ?<=?
+            ON CONFLICT(month) DO UPDATE SET reserved=collection_budget.reserved+EXCLUDED.reserved
+            WHERE collection_budget.reserved+EXCLUDED.reserved<=?
+            """,month,credits,credits,monthlyBudget,monthlyBudget);
+        if(reserved==0) health("BUDGET_LIMIT","Budget local mensuel réservé : "+monthlyBudget+" crédits",null,null,null);
+        return reserved==1;
+    }
+    Duration interval(String competition,Instant at) {
+        if(!adaptive) return oddsInterval;
+        var next=db.queryForList("SELECT starts_at FROM event WHERE source='odds-api' AND competition=? AND status='SCHEDULED' AND starts_at>? ORDER BY starts_at LIMIT 1",competition,Rows.sql(at));
+        if(next.isEmpty()) return Duration.ofHours(12);
+        long minutes=Duration.between(at,Rows.instant(next.getFirst(),"starts_at")).toMinutes();
+        return Duration.ofMinutes(minutes<=20?5:minutes<=90?15:minutes<=360?60:minutes<=1440?240:720);
+    }
 
     /**
      * Budget de crédits : chaque compétition n'est interrogée qu'une fois par oddsInterval,
@@ -117,7 +140,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     }
 
     @Override
-    public List<OddsEvent> fetch(Instant now) {
+    public synchronized List<OddsEvent> fetch(Instant now) {
         quotaReadAt = now;
         if (!configured()) {
             health("NOT_CONFIGURED", "THE_ODDS_API_KEY ou SPORTS_ODDS_COMPETITIONS absent", null, null, null);
@@ -129,11 +152,11 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         List<OddsEvent> events = new ArrayList<>();
         for (String competition : competitions) {
             String slot = "odds_last:" + competition;
-            if (!due(slot, oddsInterval, now)) {
+            if (!due(slot, interval(competition,now), now) || !reserve(1,now)) {
                 continue;
             }
             spent(slot, now);
-            String path = "/v4/sports/" + competition + "/odds?regions=fr&markets=h2h&oddsFormat=decimal&dateFormat=iso";
+            String path = "/v4/sports/" + competition + "/odds?bookmakers=betclic_fr,netbet_fr,pmu_fr,unibet_fr,winamax_fr,pinnacle&markets=h2h&oddsFormat=decimal&dateFormat=iso";
             JsonNode body = call(path);
             if (body == null) {
                 if (blocked()) {
@@ -147,7 +170,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     }
 
     @Override
-    public List<Result> results(List<Map<String, Object>> pendingEvents, Instant now) {
+    public synchronized List<Result> results(List<Map<String, Object>> pendingEvents, Instant now) {
         quotaReadAt = now;
         if (!configured() || blocked()) {
             return List.of();
@@ -162,8 +185,9 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         }
         List<Result> results = new ArrayList<>();
         for (String competition : sports) {
+            if (blocked()) break;
             String slot = "scores_last:" + competition;
-            if (!due(slot, scoresInterval, now)) {
+            if (!due(slot, scoresInterval, now) || !reserve(2,now)) {
                 continue;
             }
             spent(slot, now);
@@ -200,7 +224,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
             List<OddsPrice> prices = new ArrayList<>();
             for (JsonNode book : event.path("bookmakers")) {
                 String bookmaker = book.path("key").asText("");
-                if (!FRENCH_BOOKS.contains(bookmaker)) {
+                if (!FRENCH_BOOKS.contains(bookmaker) && !"pinnacle".equals(bookmaker)) {
                     continue;
                 }
                 for (JsonNode market : book.path("markets")) {

@@ -177,6 +177,18 @@ class TelegramTest extends PostgresTest {
     }
 
     @Test
+    void lastMinutePriceDegradationAndStalenessCancelQueuedAlerts() {
+        pipeline.runOnce();
+        db.update("UPDATE odds_snapshot SET price=1.01");
+        assertEquals(0,outbox.dispatch());
+        assertTrue(recording().sent().isEmpty());
+        db.update("UPDATE telegram_outbox SET cancelled_at=NULL,cancel_reason=NULL");
+        db.update("UPDATE odds_snapshot SET price=5,updated_at=now()-interval '16 minutes'");
+        assertEquals(0,outbox.dispatch());
+        assertEquals(3,db.queryForObject("SELECT count(*) FROM telegram_outbox WHERE cancelled_at IS NOT NULL",Integer.class));
+    }
+
+    @Test
     void onlyAllowedPrivateChatsAreServed() {
         bot.handle(text(42, "private", "/budget"));
         bot.handle(text(1000, "group", "/budget"));

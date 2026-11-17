@@ -49,7 +49,7 @@ abstract class PostgresTest {
                      paper_bet, recommendation, opportunity, prediction, feature_snapshot, odds_snapshot,
                      result_snapshot, event_participant, event, participant, competition, telegram_outbox,
                      telegram_delivery, telegram_callback, telegram_session, backtest_metric, backtest_run,
-                     provider_health, team_rating, team_news RESTART IDENTITY CASCADE
+                     provider_health, team_rating, team_news, collection_budget RESTART IDENTITY CASCADE
             """);
         db.update("""
             UPDATE risk_policy SET cap=2000, pending_cap=NULL, effective_at=NULL, max_stake=100, max_exposure=500,

@@ -110,4 +110,26 @@ class OddsBudgetTest extends PostgresTest {
         assertTrue(api.results(List.of(), Instant.now()).isEmpty());
         assertEquals(1, calls.get());
     }
+
+    @Test
+    void localMonthlyBudgetPersistsAndResetsWithoutOverspend() {
+        var api=api("soccer_france_ligue_one"); api.monthlyBudget=1;
+        Instant now=Instant.parse("2026-11-17T18:00:00Z");
+        api.fetch(now); api.fetch(now.plus(Duration.ofHours(4)));
+        assertEquals(1,calls.get());
+        assertEquals("BUDGET_LIMIT",db.queryForObject("SELECT status FROM provider_health WHERE id='odds-api'",String.class));
+        api.fetch(Instant.parse("2026-12-01T18:00:00Z"));assertEquals(2,calls.get());
+    }
+
+    @Test
+    void collectionAcceleratesNearKnownKickoff() {
+        var api=api("soccer_france_ligue_one"); api.adaptive=true;
+        Instant now=Instant.parse("2026-11-17T18:00:00Z");
+        assertEquals(Duration.ofHours(12),api.interval("soccer_france_ligue_one",now));
+        db.update("INSERT INTO competition VALUES ('soccer_france_ligue_one','soccer','Ligue 1')");
+        db.update("INSERT INTO event VALUES ('odds-api:target','soccer_france_ligue_one','odds-api','target',?,'SCHEDULED')",Rows.sql(now.plus(Duration.ofMinutes(15))));
+        assertEquals(Duration.ofMinutes(5),api.interval("soccer_france_ligue_one",now));
+        api.fetch(now);api.fetch(now.plus(Duration.ofMinutes(4)));assertEquals(1,calls.get());
+        api.fetch(now.plus(Duration.ofMinutes(5)));assertEquals(2,calls.get());
+    }
 }

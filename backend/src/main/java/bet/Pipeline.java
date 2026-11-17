@@ -35,6 +35,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class Pipeline {
+    @org.springframework.beans.factory.annotation.Autowired
+    private Observatory observatory;
     private static final Logger LOG = LoggerFactory.getLogger(Pipeline.class);
     private static final MathContext MATH = new MathContext(12);
 
@@ -94,6 +96,7 @@ public class Pipeline {
             Instant now = db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant();
             Map<String, Object> counts = new LinkedHashMap<>();
             counts.put("snapshots", collect(now));
+            counts.put("observations", observatory.capture());
             counts.put("predictions", predict(now));
             counts.put("recommendations", scan());
             counts.put("expired", expire());
@@ -101,7 +104,8 @@ public class Pipeline {
             counts.put("purged", db.update("""
                 DELETE FROM odds_snapshot WHERE id IN (
                   SELECT o.id FROM odds_snapshot o WHERE o.observed_at < now() - interval '30 days'
-                  AND NOT EXISTS (SELECT 1 FROM opportunity p WHERE p.odds_id=o.id) LIMIT 5000)
+                  AND NOT EXISTS (SELECT 1 FROM opportunity p WHERE p.odds_id=o.id)
+                  AND NOT EXISTS (SELECT 1 FROM research_observation r WHERE r.event_id=o.event_id) LIMIT 5000)
                 """));
             LOG.info("Cycle pipeline : {}", counts);
             return counts;
@@ -270,7 +274,7 @@ public class Pipeline {
                    o.price, o.observed_at, lp.p, lp.p_lower, lp.model_status
             FROM fresh_odds o JOIN latest_pred lp ON lp.event_id=o.event_id AND lp.outcome=o.outcome
             JOIN event e ON e.id=o.event_id
-            WHERE e.status='SCHEDULED' AND e.starts_at > now()
+            WHERE e.status='SCHEDULED' AND e.starts_at > now() AND o.bookmaker<>'pinnacle'
             ORDER BY e.starts_at, e.id
             """, maxAge, realOddsMaxAge);
         Map<String, Map<String, Object>> best = new LinkedHashMap<>();
@@ -404,8 +408,9 @@ public class Pipeline {
             SELECT e.id, e.source, e.competition FROM event e
             WHERE e.status='SCHEDULED' AND e.starts_at < now() - interval '2 hours'
               AND e.starts_at > now() - interval '3 days'
-              AND EXISTS (SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id
+              AND (EXISTS (SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id
                           JOIN odds_snapshot s ON s.id=o.odds_id WHERE s.event_id=e.id)
+                   OR EXISTS (SELECT 1 FROM research_observation o WHERE o.event_id=e.id))
             """); // Scores payants seulement pour régler un pari virtuel ; sinon football-data (gratuit).
         for (var provider : resultsProviders) {
             for (Result result : provider.results(pending, now)) {

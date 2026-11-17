@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 /** Textes en français partagés par les notifications et les commandes Telegram. */
 @Service
 public class Reports {
+    @org.springframework.beans.factory.annotation.Autowired
+    private Observatory observatory;
     static final String WARNING = "Aucun pari n'est placé automatiquement. Une estimation peut se tromper ; "
         + "ne misez que ce que vous acceptez de perdre.";
     static final String ANJ = "Rappel : configurez aussi chez chaque opérateur agréé vos limites de dépôts et de mises "
@@ -167,7 +169,7 @@ public class Reports {
                 .append(". Aucune nouvelle proposition de mise.\n\n");
         }
         if (rows.isEmpty()) {
-            return text.append("Aucune sélection vérifiée pour le moment. Zéro opportunité est un résultat normal.").toString();
+            return text.append(observatory.todayText()).append("\n\nAucune sélection vérifiée pour le moment. Zéro opportunité est un résultat normal.").toString();
         }
         text.append("Sélections actives :");
         for (var row : rows) {

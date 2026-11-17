@@ -114,9 +114,18 @@ public class TelegramOutbox {
             }
             boolean valid = recommendation != null && Boolean.TRUE.equals(db.queryForObject("""
                 SELECT r.status='ACTIVE' AND o.expires_at > now() AND e.starts_at > now() AND e.status='SCHEDULED'
+                  AND EXISTS (
+                    SELECT 1 FROM odds_snapshot current_price
+                    WHERE current_price.id=(SELECT x.id FROM odds_snapshot x JOIN odds_snapshot original ON original.id=o.odds_id
+                      WHERE x.event_id=original.event_id AND x.bookmaker=original.bookmaker AND x.outcome=original.outcome
+                        AND x.market=original.market ORDER BY x.observed_at DESC,x.id DESC LIMIT 1)
+                      AND current_price.observed_at<=now() AND current_price.updated_at<=now()
+                      AND current_price.updated_at>=now()-interval '15 minutes'
+                      AND current_price.price*(CASE WHEN e.source='DEMO' THEN p.p ELSE p.p_lower END)-1 >= (s.parameters->>'min_ev')::numeric)
                 FROM recommendation r JOIN opportunity o ON o.id=r.opportunity_id JOIN event e ON e.id=r.event_id
+                JOIN prediction p ON p.id=o.prediction_id JOIN strategy s ON s.id=o.strategy AND s.revision=o.revision
                 WHERE r.id=?""", Boolean.class, recommendation));
-            return valid ? null : "sélection expirée, ignorée ou match commencé";
+            return valid ? null : "sélection expirée, ignorée, cote périmée ou dégradée, ou match commencé";
         }
         if (key.startsWith("expire:")) {
             // Une alerte d'expiration n'a de sens que si la proposition a réellement été livrée.
