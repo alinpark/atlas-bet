@@ -186,6 +186,73 @@ class AdvisorApi {
         return risk();
     }
 
+    record SettlementRequest(String result, BigDecimal payout) {}
+    record CapRequest(BigDecimal cap) {}
+
+    @PostMapping("/manual-bets/{id}/settle")
+    @Transactional
+    Map<String, Object> settleManual(@PathVariable UUID id, @RequestBody SettlementRequest request) {
+        if (request.result() == null || !List.of("WIN","LOSS","PUSH","VOID").contains(request.result())
+                || request.payout() == null || request.payout().signum() < 0
+                || request.payout().scale() > 2 || request.payout().precision() > 14) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        lockPolicy();
+        var bets = db.queryForList("SELECT stake FROM manual_bet WHERE id=?", id);
+        if (bets.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        BigDecimal stake = amount(bets.getFirst(), "stake");
+        int comparison = request.payout().compareTo(stake);
+        boolean valid = switch (request.result()) {
+            case "WIN" -> comparison > 0;
+            case "LOSS" -> request.payout().signum() == 0;
+            default -> comparison == 0;
+        };
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        var previous = db.queryForList("SELECT * FROM bet_settlement WHERE manual_id=?", id);
+        if (!previous.isEmpty()) {
+            var settlement = previous.getFirst();
+            if (!settlement.get("result").equals(request.result())
+                    || amount(settlement,"payout").compareTo(request.payout()) != 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT);
+            }
+            return settlement;
+        }
+        var updated = db.queryForMap("""
+            INSERT INTO bet_settlement(manual_id,result,payout) VALUES (?,?,?) RETURNING *
+            """, id, request.result(), request.payout());
+        db.update("INSERT INTO risk_ledger(manual_id,amount,action) VALUES (?,?,'SETTLED')",
+            id, request.payout().subtract(stake));
+        audit("manual_settled", id.toString());
+        return updated;
+    }
+
+    @PostMapping("/admin/risk/cap")
+    @Transactional
+    Map<String, Object> cap(@RequestBody CapRequest request) {
+        BigDecimal cap = request.cap();
+        if (cap == null || cap.signum() <= 0 || cap.scale() > 2 || cap.compareTo(new BigDecimal("2000")) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        lockPolicy();
+        BigDecimal current = amount(risk(), "cap");
+        if (cap.compareTo(current) > 0) {
+            db.update("""
+                UPDATE risk_policy SET cap=?,pending_cap=?,
+                effective_at=(date_trunc('month',now() AT TIME ZONE 'Europe/Paris') + interval '1 month')
+                    AT TIME ZONE 'Europe/Paris' WHERE id
+                """, current, cap);
+            audit("cap_scheduled", cap.toPlainString());
+        } else {
+            db.update("UPDATE risk_policy SET cap=?,pending_cap=NULL,effective_at=NULL WHERE id", cap);
+            audit("cap_changed", cap.toPlainString());
+        }
+        return risk();
+    }
+
     private void lockPolicy() {
         db.queryForObject("SELECT id FROM risk_policy WHERE id FOR UPDATE", Boolean.class);
     }

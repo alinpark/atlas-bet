@@ -4,6 +4,10 @@ x-container: &container
   build: .
   volumes:
     - ledger:/data
+  init: true
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
   mem_limit: 128m
   cpus: 0.5
   security_opt:
@@ -37,3 +41,4 @@ services:
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
 volumes:
   ledger:
+

@@ -7,3 +7,7 @@
 !workflow.py
 !telegram_bot.py
 !worker.py
+!ai-engine/
+!ai-engine/pyproject.toml
+!ai-engine/app/
+!ai-engine/app/main.py
