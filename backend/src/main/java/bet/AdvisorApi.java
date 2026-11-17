@@ -25,9 +25,12 @@ class AdvisorApi {
     private final TelegramBot bot;
     private final TelegramClient telegram;
     private final TelegramClient.Settings telegramSettings;
+    private final RealRatings ratings;
 
     AdvisorApi(JdbcTemplate db, ObjectMapper json, RiskService risk, Pipeline pipeline, Reports reports,
-               Jobs.Backtests backtests, TelegramBot bot, TelegramClient telegram, TelegramClient.Settings telegramSettings) {
+               Jobs.Backtests backtests, TelegramBot bot, TelegramClient telegram, TelegramClient.Settings telegramSettings,
+               RealRatings ratings) {
+        this.ratings = ratings;
         this.db = db;
         this.json = json;
         this.risk = risk;
@@ -230,6 +233,13 @@ class AdvisorApi {
     @PostMapping("/admin/pipeline/run")
     Map<String, Object> runPipeline() {
         return pipeline.runOnce();
+    }
+
+    @PostMapping("/admin/ratings/refresh")
+    Map<String, Object> refreshRatings() {
+        int linked = pipeline.recordResults(ratings.refresh(java.time.LocalDate.now(Rows.PARIS)));
+        return Map.of("results", linked, "ratings",
+            db.queryForList("SELECT team, rating, as_of FROM team_rating ORDER BY rating DESC"));
     }
 
     record DemoResult(String eventId, String winner, boolean cancelled) {}

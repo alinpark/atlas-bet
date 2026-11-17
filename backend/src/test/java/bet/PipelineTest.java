@@ -69,6 +69,15 @@ class PipelineTest extends PostgresTest {
     }
 
     @Test
+    void staleOddsNeverProduceARecommendation() {
+        pipeline.collect(java.time.Instant.now());
+        db.update("UPDATE odds_snapshot SET observed_at=observed_at - interval '60 minutes'");
+        pipeline.predict(java.time.Instant.now());
+        assertEquals(0, pipeline.scan());
+        assertEquals(0, count("recommendation"));
+    }
+
+    @Test
     void expiredRecommendationsAreClosedWithAnInformativeMessage() {
         pipeline.runOnce();
         db.update("UPDATE opportunity SET expires_at=now() - interval '1 minute'");
@@ -99,10 +108,14 @@ class PipelineTest extends PostgresTest {
                 """, entry.getKey(), entry.getValue());
             db.update("""
                 INSERT INTO odds_snapshot(event_id,bookmaker,market,outcome,price,observed_at,source)
-                VALUES ('odds-api:x','winamax_fr','soccer_h2h',?,5,now(),'odds-api')
+                VALUES ('odds-api:x','winamax_fr','soccer_h2h',?,5,now() - interval '60 minutes','odds-api')
                 """, entry.getKey());
         }
         assertEquals(0, pipeline.scan());
-        assertEquals(0, count("opportunity"));
+        // Suivi silencieux : un seul pari virtuel par match, aucune recommandation ni notification.
+        pipeline.scan();
+        assertEquals(0, count("recommendation"));
+        assertEquals(0, count("telegram_outbox"));
+        assertEquals(1, count("paper_bet"));
     }
 }

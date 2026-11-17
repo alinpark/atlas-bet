@@ -47,7 +47,7 @@ public final class Providers {
     public record Ratings(double home, double away, Double homeSurface, Double awaySurface, String provenance) {}
 
     public interface StatsProvider {
-        Optional<Ratings> ratings(String source, String sport, String home, String away);
+        Optional<Ratings> ratings(String source, String sport, String competition, String home, String away);
     }
 
     public record Probability(double p, Double lower, Double upper) {}
@@ -58,5 +58,8 @@ public final class Providers {
         Forecast predict(String sport, String eventId, Instant featureTimestamp, Instant startsAt, Ratings ratings);
 
         Object backtest(Object samples);
+
+        /** Classements Elo et résultats de la saison courante depuis les CSV football-data.co.uk. */
+        com.fasterxml.jackson.databind.JsonNode footballData(List<Map<String, String>> seasons);
     }
 }

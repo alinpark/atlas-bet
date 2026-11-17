@@ -8,3 +8,5 @@ ai-engine/wheels/
 # Réglages propres à un poste (certificat d'antivirus, etc.)
 compose.override.yaml
 local/
+# Historiques téléchargés (football-data.co.uk) : scripts/fetch-history.ps1
+data/

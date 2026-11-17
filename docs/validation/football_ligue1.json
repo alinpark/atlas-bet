@@ -1,0 +1,92 @@
+{
+ "model": {
+  "version": "poisson-elo-v2",
+  "home_goals": 1.2,
+  "away_goals": 0.9,
+  "scale": 200.0
+ },
+ "elo": {
+  "k": 20.0,
+  "home_advantage": 60.0,
+  "start": 1500.0,
+  "promoted": 1420.0,
+  "carry": 0.8
+ },
+ "train_matches": 2179,
+ "train_log_loss": 1.0060935537662041,
+ "test_seasons": [
+  "2223",
+  "2324",
+  "2425",
+  "2526",
+  "2627"
+ ],
+ "test": {
+  "matches": 1388,
+  "log_loss": 0.9972438215496953,
+  "market_log_loss": 0.9773283791934115,
+  "brier": 0.5944932873267693,
+  "ece": 0.021132673926485337,
+  "calibration": [
+   {
+    "forecast": 0.07081059581446777,
+    "frequency": 0.1016949152542373,
+    "count": 118
+   },
+   {
+    "forecast": 0.15271572925883933,
+    "frequency": 0.1732142857142857,
+    "count": 560
+   },
+   {
+    "forecast": 0.26286633405403725,
+    "frequency": 0.25274725274725274,
+    "count": 1638
+   },
+   {
+    "forecast": 0.3367978250331398,
+    "frequency": 0.3342503438789546,
+    "count": 727
+   },
+   {
+    "forecast": 0.4493818603781414,
+    "frequency": 0.4889380530973451,
+    "count": 452
+   },
+   {
+    "forecast": 0.5464292990423156,
+    "frequency": 0.47962382445141066,
+    "count": 319
+   },
+   {
+    "forecast": 0.6508823849270691,
+    "frequency": 0.6982758620689655,
+    "count": 232
+   },
+   {
+    "forecast": 0.7392442907899512,
+    "frequency": 0.6987951807228916,
+    "count": 83
+   },
+   {
+    "forecast": 0.8257980172934775,
+    "frequency": 0.8,
+    "count": 35
+   }
+  ],
+  "bets": 882,
+  "roi": -0.15670068027210884,
+  "roi_ci95": [
+   -0.2513492063492063,
+   -0.06088435374149661
+  ],
+  "mean_clv": -0.0043224303626824435,
+  "clv_count": 882
+ },
+ "criteria": {
+  "threshold_ev": 0.05,
+  "min_bets": 150,
+  "rule": "roi_ci95_low > 0"
+ },
+ "status": "UNVALIDATED"
+}

@@ -124,11 +124,43 @@ public final class Jobs {
         private final Pipeline pipeline;
         private final TelegramBot bot;
         private final TelegramOutbox outbox;
+        private final RealRatings ratings;
+        private final Reports reports;
 
-        public Scheduler(Pipeline pipeline, TelegramBot bot, TelegramOutbox outbox) {
+        public Scheduler(Pipeline pipeline, TelegramBot bot, TelegramOutbox outbox, RealRatings ratings, Reports reports) {
             this.pipeline = pipeline;
             this.bot = bot;
             this.outbox = outbox;
+            this.ratings = ratings;
+            this.reports = reports;
+        }
+
+        /** Classements et résultats réels : au démarrage puis chaque jour à 7 h (Paris). */
+        @EventListener(ApplicationReadyEvent.class)
+        void ratingsAtStartup() {
+            new Thread(this::ratings, "ratings-startup").start();
+        }
+
+        @Scheduled(cron = "0 0 7 * * *", zone = "Europe/Paris")
+        void ratings() {
+            try {
+                int linked = pipeline.recordResults(ratings.refresh(java.time.LocalDate.now(Rows.PARIS)));
+                LOG.info("Classements réels mis à jour, {} résultat(s) rapproché(s)", linked);
+            } catch (Exception error) {
+                LOG.warn("Mise à jour des classements en échec : {}", error.getClass().getSimpleName());
+            }
+        }
+
+        /** Synthèse hebdomadaire Telegram, lundi 9 h (Paris), une seule fois par semaine. */
+        @Scheduled(cron = "0 0 9 * * MON", zone = "Europe/Paris")
+        void weekly() {
+            try {
+                var week = java.time.LocalDate.now(Rows.PARIS).get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                outbox.enqueue("weekly:" + java.time.LocalDate.now(Rows.PARIS).getYear() + "-" + week, null,
+                    reports.weekly(), java.util.List.of());
+            } catch (Exception error) {
+                LOG.warn("Synthèse hebdomadaire en échec : {}", error.getClass().getSimpleName());
+            }
         }
 
         @Scheduled(initialDelayString = "${bet.pipeline.initial-delay-ms:15000}",

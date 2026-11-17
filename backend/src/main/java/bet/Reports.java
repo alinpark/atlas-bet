@@ -184,10 +184,32 @@ public class Reports {
                    coalesce(sum(s.payout-b.stake),0) AS net
             FROM manual_bet b JOIN bet_settlement s ON s.manual_id=b.id
             UNION ALL
-            SELECT 'paper', count(*), coalesce(sum(b.stake),0), coalesce(sum(s.payout-b.stake),0)
-            FROM paper_bet b JOIN bet_settlement s ON s.paper_id=b.id
+            SELECT CASE WHEN e.source='DEMO' THEN 'paper_demo' ELSE 'paper_real' END, count(*),
+                   coalesce(sum(b.stake),0), coalesce(sum(s.payout-b.stake),0)
+            FROM paper_bet b JOIN bet_settlement s ON s.paper_id=b.id JOIN opportunity o ON o.id=b.opportunity_id
+            JOIN odds_snapshot x ON x.id=o.odds_id JOIN event e ON e.id=x.event_id
+            GROUP BY 1
             """);
-        return Map.of("predictions", predictions, "bets", bets);
+        // CLV : cote prise comparée à la dernière cote relevée avant le coup d'envoi (même bookmaker, même issue).
+        var clv = db.queryForList("""
+            SELECT CASE WHEN e.source='DEMO' THEN 'paper_demo' ELSE 'paper_real' END AS kind, count(*) AS bets,
+                   avg(b.odds / c.price - 1) AS mean_clv
+            FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id JOIN odds_snapshot s ON s.id=o.odds_id
+            JOIN event e ON e.id=s.event_id
+            JOIN LATERAL (SELECT x.price FROM odds_snapshot x WHERE x.event_id=s.event_id AND x.bookmaker=s.bookmaker
+                          AND x.outcome=s.outcome AND x.observed_at < e.starts_at
+                          ORDER BY x.observed_at DESC LIMIT 1) c ON true
+            WHERE e.starts_at <= now() GROUP BY 1
+            """);
+        return Map.of("predictions", predictions, "bets", bets, "clv", clv);
+    }
+
+    private static String kindLabel(Object kind) {
+        return switch (String.valueOf(kind)) {
+            case "manual" -> "Paris réels déclarés";
+            case "paper_real" -> "Paper sur matchs réels (modèle non validé)";
+            default -> "Paper DEMO (matchs fictifs)";
+        };
     }
 
     public String performance() {
@@ -208,12 +230,37 @@ public class Reports {
         for (var row : bets) {
             BigDecimal stake = Rows.decimal(row, "stake");
             BigDecimal net = Rows.decimal(row, "net");
-            text.append("\n").append("manual".equals(row.get("kind")) ? "Paris réels déclarés" : "Paris virtuels (paper)")
+            text.append("\n").append(kindLabel(row.get("kind")))
                 .append(" : ").append(row.get("settled")).append(" réglés, mises ").append(Rows.euros(stake))
                 .append(", net ").append(Rows.euros(net)).append(", ROI ")
                 .append(stake.signum() == 0 ? "—" : percent(net.divide(stake, 4, RoundingMode.HALF_UP)));
         }
+        @SuppressWarnings("unchecked")
+        var clv = (List<Map<String, Object>>) data.get("clv");
+        for (var row : clv) {
+            text.append("\nCLV ").append(kindLabel(row.get("kind"))).append(" : ")
+                .append(percent(Rows.decimal(row, "mean_clv"))).append(" sur ").append(row.get("bets"))
+                .append(" pari(s) (positif = meilleure cote que la clôture)");
+        }
         return text.append("\nUne performance passée peut être due au hasard.").toString();
+    }
+
+    /** Synthèse hebdomadaire envoyée le lundi matin. */
+    public String weekly() {
+        var quota = db.queryForList("SELECT quota_remaining FROM provider_health WHERE id='odds-api'");
+        var week = db.queryForMap("""
+            SELECT count(*) FILTER (WHERE e.source<>'DEMO') AS real_predicted,
+                   count(*) FILTER (WHERE e.source='DEMO') AS demo_predicted
+            FROM (SELECT DISTINCT f.event_id FROM feature_snapshot f WHERE f.observed_at > now() - interval '7 days') p
+            JOIN event e ON e.id=p.event_id
+            """);
+        return "Synthèse de la semaine\nMatchs réels analysés : " + week.get("real_predicted")
+            + " ; matchs DEMO : " + week.get("demo_predicted") + "\n\n" + performance() + "\n\n" + budget()
+            + (quota.isEmpty() || quota.getFirst().get("quota_remaining") == null ? ""
+                : "\nCrédits The Odds API restants : " + quota.getFirst().get("quota_remaining"))
+            + "\n\nStatut des modèles : " + String.join(", ", db.queryForList(
+                "SELECT id || ' ' || status FROM model_version ORDER BY sport, id", String.class))
+            + "\nSans modèle VALIDATED, aucune suggestion réelle n'est envoyée.";
     }
 
     public String budget() {

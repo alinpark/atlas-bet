@@ -1,40 +1,61 @@
 # Fiche des modèles
 
-Statut de tous les modèles : **UNVALIDATED**. Aucune validation empirique sur données
-réelles n'a été réalisée ; aucun coefficient n'a été ajusté sur des données.
+Statut de tous les modèles : **UNVALIDATED**. Le modèle football a été testé sur données
+réelles et **ne bat pas le marché** : aucune suggestion réelle n'est émise.
 
-| Sport | Version | Formule | Paramètres fixés à la main |
+| Sport | Version | Entrées | Statut |
 |---|---|---|---|
-| Football (1X2) | `poisson-rating-v1` | Deux lois de Poisson indépendantes ; buts attendus 1,45 × √r et 1,15 / √r avec r = exp((Rdom − Rext)/400) borné | 1,45 ; 1,15 ; 400 ; borne ±1,5 |
-| Tennis (vainqueur) | `surface-elo-v1` | Elo sur 0,6 × classement général + 0,4 × classement surface | 0,6 / 0,4 |
-| Basketball (vainqueur, prolongations incluses) | `home-elo-v1` | Elo avec avantage domicile | +80 points |
+| Football 1X2 (Ligue 1) | `poisson-elo-v2` | Elo calculé sur les résultats (football-data.co.uk) | UNVALIDATED — testé, perdant |
+| Football (DEMO) | `poisson-elo-v2` | Classements synthétiques | Démo uniquement |
+| Tennis | `surface-elo-v1` | Aucune source réelle branchée | UNVALIDATED, démo |
+| Basketball | `home-elo-v1` | Aucune source réelle branchée | UNVALIDATED, démo |
 
-## Entrées
+## Football : `poisson-elo-v2`
 
-Classements fournis par un `StatsProvider`, **indépendants des cotes**. Seule la source
-DEMO (classements synthétiques) est branchée ; pour les matchs réels, aucune
-statistique n'est disponible et aucune prédiction n'est produite (`INSUFFICIENT_DATA`
-implicite). Les caractéristiques sont horodatées (`feature_snapshot.observed_at`) et le
-moteur refuse toute caractéristique postérieure au début du match.
+- **Classements** (`ratings.py`) : Elo à partir des seuls résultats, K = 20, avantage du
+  terrain 60 points, multiplicateur selon l'écart de buts, retour de 20 % vers la moyenne
+  entre saisons, promus à 1 420. Indépendant des cotes. Recalculé chaque jour à 7 h
+  (Paris) par le backend depuis football-data.co.uk (gratuit, aucun crédit The Odds API).
+- **Probabilités** : deux lois de Poisson ; buts attendus 1,2 × √r et 0,9 / √r, avec
+  r = exp((Elo domicile − Elo extérieur) / 200), borné.
+- **Ajustement** : grille sur les saisons 2016/17 à 2021/22 (2 179 matchs ; 2015/16 sert à
+  initialiser l'Elo). Première grille trop étroite (optimum en bordure), donc élargie ;
+  critères de test inchangés.
+
+### Validation hors échantillon (`validation_football.py`)
+
+Critères fixés **avant** le test : pari simulé sur l'issue d'EV maximal si EV ≥ 5 % à la
+cote moyenne avant match ; VALIDATED seulement si au moins 150 paris ET borne basse de
+l'intervalle à 95 % du ROI > 0.
+
+| Test : 2022/23 → 2026/27 (1 388 matchs) | Modèle | Marché (cotes moyennes, marge retirée) |
+|---|---|---|
+| Log loss | 0,997 | **0,977** |
+| Erreur de calibration (ECE) | 0,021 | — |
+| Paris simulés | 882 | — |
+| ROI | **−15,7 %** (IC 95 % : −25,1 % ; −6,1 %) | — |
+| CLV moyen des choix | −0,4 % | — |
+
+**Conclusion : UNVALIDATED.** Le marché est plus précis que le modèle. Les « valeurs »
+détectées sont surtout des matchs nuls et des outsiders surestimés. Rapport complet :
+[validation/football_ligue1.json](validation/football_ligue1.json). Pour le rejouer :
+`scripts\fetch-history.ps1`.
+
+## Suivi en conditions réelles (sans notification)
+
+Sur les vrais matchs de Ligue 1, le modèle produit des prédictions. Quand il voit un EV ≥ 5 %,
+un **pari virtuel** est enregistré (un par match), sans recommandation ni message. Résultats
+via football-data ; ROI et CLV visibles dans `/performance` et dans la synthèse du lundi.
+C'est la mesure qui dira si une future version mérite d'être revalidée.
 
 ## Incertitude
 
-`pLower`/`pUpper` sont `null` : aucune calibration démontrée. En conséquence `EV_lower`
-est nul et **aucune opportunité réelle ne peut être émise** (règle du scanner).
+`pLower`/`pUpper` restent `null` : aucune calibration d'intervalle démontrée, donc
+`EV_lower` est nul et le scanner n'émet aucune opportunité réelle notifiable.
 
-## Évaluation
+## Pour qu'un modèle passe VALIDATED
 
-- `POST /backtest` (moteur) et `POST /api/v1/backtests` (job asynchrone) : Brier, log loss,
-  ECE, calibration par déciles, walk-forward (température choisie uniquement sur les matchs
-  réglés avant chaque prévision), baselines favori / aléatoire / cotes corrigées de la marge.
-- Jeu de démonstration : `fixtures/sports/backtest_demo.json` (90 matchs synthétiques,
-  graine fixe, `generate_backtest_demo.py`). Les résultats y sont tirés selon le modèle
-  lui-même : ils prouvent que le calcul tourne, **pas** que le modèle est bon.
-
-## Pour passer un modèle en VALIDATED
-
-1. Importer un historique réel horodaté (classements as-of, cotes, résultats).
-2. Backtest walk-forward hors échantillon par sport et compétition, comparé aux cotes
-   corrigées de la marge.
-3. Calibrer des intervalles et vérifier leur taux de couverture.
-4. Mettre à jour `model_version.status` et `calibration` par migration, avec le rapport joint.
+1. Nouvelle version (nouvelles données : compositions, blessures, xG… ou autre modèle).
+2. Critères de test fixés avant l'exécution, sur des saisons non utilisées pour l'ajustement.
+3. Intervalles calibrés (taux de couverture vérifié) pour produire `pLower`.
+4. Migration qui passe `model_version.status` à VALIDATED, avec le rapport joint.

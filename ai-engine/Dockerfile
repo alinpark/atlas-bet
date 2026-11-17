@@ -12,7 +12,7 @@ RUN if [ "$OFFLINE_WHEELS" = "1" ]; then \
       pip install --no-cache-dir -r /tmp/deps/requirements.txt; \
     fi && rm -rf /tmp/deps
 COPY ai-engine/app ./app
-COPY models.py workflow.py providers.py ./
+COPY models.py workflow.py providers.py ratings.py ./
 USER 10001:10001
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

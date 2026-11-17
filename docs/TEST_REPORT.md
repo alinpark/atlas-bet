@@ -4,13 +4,20 @@ Exécutés sur ce poste (Windows 11, Docker 29.9.3, JDK 21.0.13, Python 3.12.10)
 
 | Commande | Résultat |
 |---|---|
-| `scripts\run-tests.ps1` — `python -m unittest -v` | 9 tests, OK |
+| `scripts\run-tests.ps1` — `python -m unittest -v` | 13 tests, OK (dont Elo, lecture des CSV, validation) |
+| `scripts\fetch-history.ps1` — validation football Ligue 1 | 1 388 matchs de test, ROI −15,7 % → UNVALIDATED |
 | `scripts\run-tests.ps1` — tests du moteur FastAPI | 1 test, OK (3 sports, authentification, chronologie, /models/metrics) |
-| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 27 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1+V2) |
+| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 31 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1 à V3) |
+| Déploiement : classements réels | 18 équipes de Ligue 1, 9 matchs prédits, 6 paris virtuels réels, 0 notification réelle |
 | Déploiement local avec vraie clé et vrai bot | Cotes Ligue 1 collectées (1 crédit), 3 notifications DEMO reçues sur Telegram |
 | `scripts\smoke.ps1 -SkipBuild` | 10 étapes du §8 réussies, code 0, sur le stack Docker complet |
 
-## Tests backend (27)
+## Tests backend (31)
+
+- `RealRatingsTest` (3) : classements stockés, noms The Odds API rapprochés (alias,
+  accents), résultats publiés qui règlent un vrai match sans crédit API.
+- `PipelineTest` (+1) : cote périmée → aucune recommandation ; match réel avec modèle non
+  validé → un seul pari virtuel silencieux.
 
 - `OddsBudgetTest` (3), contre un faux serveur HTTP local : un appel par compétition et par
   intervalle ; arrêt au plancher de quota ; blocage sur HTTP 429 ; aucun appel de scores

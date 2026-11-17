@@ -59,7 +59,7 @@ public class FixtureProviders implements Providers.OddsProvider, Providers.Stats
     }
 
     @Override
-    public Optional<Ratings> ratings(String source, String sport, String home, String away) {
+    public Optional<Ratings> ratings(String source, String sport, String competition, String home, String away) {
         if (!SOURCE.equals(source) || !RATINGS.containsKey(home) || !RATINGS.containsKey(away)) {
             return Optional.empty();
         }

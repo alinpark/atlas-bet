@@ -49,6 +49,8 @@ public class Pipeline {
     private final TelegramOutbox outbox;
     private final Reports reports;
     private final java.util.Set<String> oddsSources;
+    @Value("${bet.pipeline.real-odds-max-age-minutes:135}")
+    private int realOddsMaxAge = 135;
 
     public Pipeline(JdbcTemplate db, ObjectMapper json, TransactionTemplate tx,
                     List<Providers.OddsProvider> oddsProviders, List<Providers.ResultsProvider> resultsProviders,
@@ -160,7 +162,7 @@ public class Pipeline {
 
     int predict(Instant now) {
         var events = db.queryForList("""
-            SELECT e.id, e.source, e.starts_at, c.sport, hp.name AS home, ap.name AS away
+            SELECT e.id, e.source, e.starts_at, e.competition, c.sport, hp.name AS home, ap.name AS away
             FROM event e JOIN competition c ON c.id=e.competition
             JOIN event_participant h ON h.event_id=e.id AND h.side='home' JOIN participant hp ON hp.id=h.participant_id
             JOIN event_participant a ON a.event_id=e.id AND a.side='away' JOIN participant ap ON ap.id=a.participant_id
@@ -176,7 +178,7 @@ public class Pipeline {
             String eventId = Rows.text(event, "id");
             Instant startsAt = Rows.instant(event, "starts_at");
             Optional<Ratings> ratings = stats.ratings(Rows.text(event, "source"), sport,
-                Rows.text(event, "home"), Rows.text(event, "away"));
+                Rows.text(event, "competition"), Rows.text(event, "home"), Rows.text(event, "away"));
             if (ratings.isEmpty()) {
                 continue; // INSUFFICIENT_DATA : aucune statistique indépendante des cotes.
             }
@@ -251,6 +253,7 @@ public class Pipeline {
         int maxAge = parameters.path("max_odds_age_minutes").asInt(15);
         int expiry = parameters.path("expiry_minutes").asInt(60);
         BigDecimal paperStake = new BigDecimal(parameters.path("paper_stake").asText("10"));
+        Instant scanNow = db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant();
         var candidates = db.queryForList("""
             WITH latest_pred AS (
               SELECT DISTINCT ON (f.event_id, p.outcome) p.id, f.event_id, p.outcome, p.p, p.p_lower,
@@ -259,7 +262,7 @@ public class Pipeline {
               ORDER BY f.event_id, p.outcome, p.observed_at DESC),
             fresh_odds AS (
               SELECT DISTINCT ON (o.event_id, o.bookmaker, o.outcome) o.*
-              FROM odds_snapshot o WHERE o.observed_at >= now() - make_interval(mins => ?)
+              FROM odds_snapshot o WHERE o.observed_at >= now() - make_interval(mins => greatest(?, ?))
               ORDER BY o.event_id, o.bookmaker, o.outcome, o.observed_at DESC)
             SELECT o.id AS odds_id, lp.id AS prediction_id, e.id AS event_id, e.source, e.starts_at,
                    o.price, o.observed_at, lp.p, lp.p_lower, lp.model_status
@@ -267,8 +270,9 @@ public class Pipeline {
             JOIN event e ON e.id=o.event_id
             WHERE e.status='SCHEDULED' AND e.starts_at > now()
             ORDER BY e.starts_at, e.id
-            """, maxAge);
+            """, maxAge, realOddsMaxAge);
         Map<String, Map<String, Object>> best = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> shadowBest = new LinkedHashMap<>();
         for (var row : candidates) {
             BigDecimal price = Rows.decimal(row, "price");
             BigDecimal ev = Rows.decimal(row, "p").multiply(price, MATH).subtract(BigDecimal.ONE).setScale(6, RoundingMode.HALF_UP);
@@ -277,10 +281,16 @@ public class Pipeline {
                 : lower.multiply(price, MATH).subtract(BigDecimal.ONE).setScale(6, RoundingMode.HALF_UP);
             boolean demo = FixtureProviders.SOURCE.equals(row.get("source"));
             boolean validated = "VALIDATED".equals(row.get("model_status"));
+            boolean fresh = !Rows.instant(row, "observed_at").isBefore(scanNow.minus(maxAge, ChronoUnit.MINUTES));
             // Données réelles : modèle validé ET borne basse calibrée au-dessus du seuil.
-            boolean eligible = demo ? ev.compareTo(minEv) >= 0
-                : validated && evLower != null && evLower.compareTo(minEv) >= 0;
-            if (!eligible) {
+            // Une recommandation exige une cote fraîche ; le suivi paper réel tolère l'intervalle de collecte.
+            boolean eligible = fresh && (demo ? ev.compareTo(minEv) >= 0
+                : validated && evLower != null && evLower.compareTo(minEv) >= 0);
+            // Match réel, modèle non validé : suivi paper silencieux (aucune notification) pour
+            // mesurer le modèle en conditions réelles.
+            boolean shadow = !demo && !eligible && ev.compareTo(minEv) >= 0
+                && !Rows.instant(row, "starts_at").isBefore(scanNow);
+            if (!eligible && !shadow) {
                 continue;
             }
             Instant expires = Rows.instant(row, "observed_at").plus(expiry, ChronoUnit.MINUTES);
@@ -295,11 +305,21 @@ public class Pipeline {
                 SELECT id FROM opportunity WHERE odds_id=? AND prediction_id=? AND strategy=? AND revision=?
                 """, Long.class, row.get("odds_id"), row.get("prediction_id"), strategy.get("id"), strategy.get("revision"));
             String event = Rows.text(row, "event_id");
-            var current = best.get(event);
+            var target = shadow ? shadowBest : best;
+            var current = target.get(event);
             BigDecimal rank = evLower != null ? evLower : ev;
             if (current == null || rank.compareTo((BigDecimal) current.get("rank")) > 0) {
-                best.put(event, Map.of("opportunity", opportunity, "rank", rank, "price", price));
+                target.put(event, Map.of("opportunity", opportunity, "rank", rank, "price", price));
             }
+        }
+        for (var entry : shadowBest.entrySet()) {
+            db.update("""
+                INSERT INTO paper_bet(id,opportunity_id,stake,odds)
+                SELECT ?,?,?,? WHERE NOT EXISTS (
+                  SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id
+                  JOIN odds_snapshot s ON s.id=o.odds_id WHERE s.event_id=?)
+                """, UUID.randomUUID(), entry.getValue().get("opportunity"), paperStake,
+                entry.getValue().get("price"), entry.getKey());
         }
         int created = 0;
         for (var entry : best.entrySet()) {
@@ -377,8 +397,9 @@ public class Pipeline {
             SELECT e.id, e.source, e.competition FROM event e
             WHERE e.status='SCHEDULED' AND e.starts_at < now() - interval '2 hours'
               AND e.starts_at > now() - interval '3 days'
-              AND EXISTS (SELECT 1 FROM feature_snapshot f WHERE f.event_id=e.id)
-            """); // Résultat utile seulement pour un match prédit : pas de crédit dépensé sinon.
+              AND EXISTS (SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id
+                          JOIN odds_snapshot s ON s.id=o.odds_id WHERE s.event_id=e.id)
+            """); // Scores payants seulement pour régler un pari virtuel ; sinon football-data (gratuit).
         for (var provider : resultsProviders) {
             for (Result result : provider.results(pending, now)) {
                 recordResult(result);
@@ -404,6 +425,23 @@ public class Pipeline {
                 """, bet.get("id"), result, payout);
         }
         return settled;
+    }
+
+    /** Résultats d'une source externe ; un conflit est journalisé sans bloquer les autres. */
+    public int recordResults(List<Result> results) {
+        int recorded = 0;
+        for (Result result : results) {
+            try {
+                recordResult(result);
+                recorded++;
+            } catch (ApiException error) {
+                LOG.warn("Résultat ignoré pour {} : {}", result.eventId(), error.getMessage());
+            }
+        }
+        if (recorded > 0) {
+            settle(db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant());
+        }
+        return recorded;
     }
 
     /** Enregistre un résultat définitif ; un résultat déjà connu et différent est refusé. */

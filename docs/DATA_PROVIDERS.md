@@ -4,9 +4,23 @@
 |---|---|---|
 | Cotes h2h pré-match | The Odds API V4, `regions=fr`, `markets=h2h` | **Vérifié en réel le 17/11/2026** : 18 matchs de Ligue 1, 219 cotes FR, 1 crédit |
 | Cotes DEMO | `FixtureProviders` | Utilisé par la démo et les tests |
-| Résultats réels | The Odds API `/scores?daysFrom=3` | Implémenté (vainqueur depuis le score final), non vérifié en réel |
+| Résultats réels (Ligue 1) | football-data.co.uk, CSV quotidien | **Vérifié le 17/11/2026** ; gratuit, rapproché par date et équipes |
+| Résultats réels (secours) | The Odds API `/scores?daysFrom=3` | Seulement pour régler un pari virtuel, au plus une fois par jour |
 | Résultats DEMO | `POST /api/v1/admin/demo/results` | Réservé aux matchs DEMO |
-| Statistiques sportives (classements) | Aucune source réelle branchée | Interface `StatsProvider` ; seule la source DEMO existe |
+| Classements football (Ligue 1) | Elo calculé sur les résultats football-data.co.uk 2015/16 → saison en cours | **Vérifié** : 18 équipes ; recalcul quotidien à 7 h |
+| Classements tennis / basketball | Aucune source réelle | Seule la source DEMO existe |
+
+## football-data.co.uk
+
+- Fichiers `https://football-data.co.uk/mmz4281/<saison>/F1.csv` (ex. `2627`), gratuits,
+  mis à jour en général deux fois par semaine : les résultats peuvent arriver avec quelques
+  jours de retard.
+- Seuls les résultats servent aux classements (indépendants des cotes) ; les cotes
+  historiques du fichier ne servent qu'à la validation.
+- Noms d'équipes : correspondance The Odds API → football-data dans `RealRatings.ALIASES`
+  (« Paris Saint Germain » → « Paris SG », « RC Lens » → « Lens »…). Un nom inconnu est
+  signalé dans `GET /api/v1/providers/health` (ligne `football-data`).
+- Usage personnel ; vérifier les conditions du site avant tout usage commercial.
 
 ## The Odds API
 

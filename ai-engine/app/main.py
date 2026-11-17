@@ -8,11 +8,12 @@ from pydantic import AwareDatetime, BaseModel, Field
 
 from models import evaluate, predict
 from providers import demo, live_odds, normalize_odds
+from ratings import FOOTBALL, elo_walk, football_probabilities, parse_football_data, winner
 from workflow import temporal_report
 
-app = FastAPI(title="Atlas Bet AI", version="1.0.0")
+app = FastAPI(title="Atlas Bet AI", version="1.1.0")
 Sport = Literal["soccer", "tennis", "basketball"]
-MODELS = {"soccer":"poisson-rating-v1", "tennis":"surface-elo-v1", "basketball":"home-elo-v1"}
+MODELS = {"soccer": FOOTBALL["version"], "tennis": "surface-elo-v1", "basketball": "home-elo-v1"}
 
 
 def authorize(x_engine_token: str = Header(default="")):
@@ -35,15 +36,7 @@ class PredictRequest(BaseModel):
 def probabilities(sport, request):
     home, away = request.homeRating, request.awayRating
     if sport == "soccer":
-        ratio = math.exp(max(-1.5, min(1.5, (home - away) / 400)))
-        means = (1.45 * math.sqrt(ratio), 1.15 / math.sqrt(ratio))
-        grids = [[math.exp(-rate) * rate**i / math.factorial(i) for i in range(30)] for rate in means]
-        result = dict.fromkeys(("home", "draw", "away"), 0.0)
-        for i, first in enumerate(grids[0]):
-            for j, second in enumerate(grids[1]):
-                result["home" if i > j else "away" if i < j else "draw"] += first * second
-        total = sum(result.values())
-        return {key: value / total for key, value in result.items()}
+        return football_probabilities(home, away)
     if sport == "tennis" and request.homeSurfaceRating is not None and request.awaySurfaceRating is not None:
         home = 0.6 * home + 0.4 * request.homeSurfaceRating
         away = 0.6 * away + 0.4 * request.awaySurfaceRating
@@ -53,6 +46,30 @@ def probabilities(sport, request):
 @app.get("/health")
 def health():
     return {"status": "UP"}
+
+
+class Season(BaseModel):
+    season: str = Field(pattern=r"^\d{4}$")
+    csv: str = Field(max_length=2_000_000)
+
+
+@app.post("/ratings/football-data", dependencies=[Depends(authorize)])
+def football_data(seasons: list[Season]):
+    """Classements Elo du jour et résultats récents depuis les CSV football-data.co.uk (résultats seuls)."""
+    try:
+        matches = [match for item in seasons for match in parse_football_data(item.csv, item.season)]
+    except (ValueError, KeyError) as error:
+        raise HTTPException(422, "CSV football-data illisible") from error
+    if not matches:
+        raise HTTPException(422, "Aucun match terminé")
+    _, ratings = elo_walk(matches)
+    last = max(match["date"] for match in matches)
+    current = max(item.season for item in seasons)
+    return {"ratings": {team: round(value, 2) for team, value in ratings.items()},
+            "teams": sorted({m["home"] for m in matches if m["season"] == current}),
+            "asOf": last, "matches": len(matches),
+            "results": [{"date": m["date"], "home": m["home"], "away": m["away"], "winner": winner(m)}
+                        for m in matches if m["season"] == current]}
 
 
 @app.get("/models/active", dependencies=[Depends(authorize)])

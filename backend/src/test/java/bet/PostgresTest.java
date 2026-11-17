@@ -49,7 +49,7 @@ abstract class PostgresTest {
                      paper_bet, recommendation, opportunity, prediction, feature_snapshot, odds_snapshot,
                      result_snapshot, event_participant, event, participant, competition, telegram_outbox,
                      telegram_delivery, telegram_callback, telegram_session, backtest_metric, backtest_run,
-                     provider_health RESTART IDENTITY CASCADE
+                     provider_health, team_rating RESTART IDENTITY CASCADE
             """);
         db.update("""
             UPDATE risk_policy SET cap=2000, pending_cap=NULL, effective_at=NULL, max_stake=100, max_exposure=500,
@@ -90,6 +90,17 @@ abstract class PostgresTest {
                     String model = Map.of("soccer", "poisson-rating-v1", "tennis", "surface-elo-v1",
                         "basketball", "home-elo-v1").get(sport);
                     return new Forecast(model, "UNVALIDATED", outcomes);
+                }
+
+                @Override
+                public com.fasterxml.jackson.databind.JsonNode footballData(java.util.List<Map<String, String>> seasons) {
+                    var json = new com.fasterxml.jackson.databind.ObjectMapper();
+                    String yesterday = java.time.LocalDate.now(Rows.PARIS).minusDays(1).toString();
+                    return json.valueToTree(Map.of(
+                        "ratings", Map.of("Paris SG", 1720.5, "Lens", 1580.0),
+                        "teams", java.util.List.of("Lens", "Paris SG"), "asOf", yesterday, "matches", seasons.size(),
+                        "results", java.util.List.of(Map.of("date", yesterday, "home", "Paris SG", "away", "Lens",
+                            "winner", "home"))));
                 }
 
                 @Override

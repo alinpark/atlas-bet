@@ -51,4 +51,9 @@ public class HttpProbabilityEngine implements Providers.ProbabilityEngine {
     public Object backtest(Object samples) {
         return client.post().uri("/backtest").body(samples).retrieve().body(JsonNode.class);
     }
+
+    @Override
+    public JsonNode footballData(java.util.List<Map<String, String>> seasons) {
+        return client.post().uri("/ratings/football-data").body(seasons).retrieve().body(JsonNode.class);
+    }
 }
