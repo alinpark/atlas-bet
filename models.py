@@ -1,7 +1,15 @@
 import math
 from decimal import Decimal
+from datetime import datetime, timezone
 
 MARKETS = {"soccer": ("home", "draw", "away"), "tennis": ("home", "away"), "basketball": ("home", "away")}
+
+
+def instant(value):
+    parsed = datetime.fromisoformat(value) if isinstance(value, str) else value
+    if not isinstance(parsed, datetime) or parsed.utcoffset() is None:
+        raise ValueError("Horodatage avec fuseau requis")
+    return parsed.astimezone(timezone.utc)
 
 
 def predict(sport, home, away):
@@ -27,7 +35,8 @@ def evaluate(samples):
     count, brier, loss = 0, 0.0, 0.0
     bins = [[0, 0.0, 0] for _ in range(10)]
     for sample in samples:
-        if not sample["observed"] < sample["start"] <= sample["settled"]:
+        observed, start, settled = (instant(sample[key]) for key in ("observed", "start", "settled"))
+        if not observed < start <= settled:
             raise ValueError("Chronologie invalide")
         probabilities = predict(sample["sport"], sample["home_rating"], sample["away_rating"])
         outcome = sample["winner"]
@@ -45,4 +54,5 @@ def evaluate(samples):
             "log_loss": loss / count if count else None,
             "calibration": [{"count": n, "forecast": p/n, "frequency": wins/n}
                             for n, p, wins in bins if n],
+            "ece": sum(abs(p - wins) for n, p, wins in bins) / sum(n for n, _, _ in bins) if count else None,
             "status": "UNVALIDATED"}

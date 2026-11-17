@@ -5,7 +5,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-from models import MARKETS, edge, evaluate, predict
+from models import MARKETS, edge, evaluate, instant, predict
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -19,13 +19,6 @@ CREATE TABLE IF NOT EXISTS simulations (
     payout INTEGER, result TEXT
 );
 """
-
-
-def instant(value):
-    parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None:
-        raise ValueError("Horodatage avec fuseau requis")
-    return parsed.astimezone(timezone.utc)
 
 
 def validate_snapshot(snapshot):
