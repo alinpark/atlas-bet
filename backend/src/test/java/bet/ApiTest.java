@@ -31,12 +31,15 @@ class ApiTest extends PostgresTest {
             {"reference":"api-1","label":"Saisie hors bot","eventRef":"Lyon - Nantes","market":"soccer_h2h",
              "outcome":"home","bookmaker":"winamax_fr","odds":2.1,"stake":500,"source":"HORS_BOT"}
             """;
+        // Contrôle préalable : 500 EUR dépasseraient la mise maximale.
+        mvc.perform(post("/api/v1/risk/check").with(httpBasic("admin", "test-admin"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"stake\":500}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.allowed").value(false));
+        // Mais un pari déjà placé est enregistré, avec le dépassement tracé.
         mvc.perform(post("/api/v1/manual-bets").with(httpBasic("admin", "test-admin"))
                 .contentType(MediaType.APPLICATION_JSON).content(body))
-            .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("mise maximale")));
-        mvc.perform(post("/api/v1/manual-bets").with(httpBasic("admin", "test-admin"))
-                .contentType(MediaType.APPLICATION_JSON).content(body.replace("500", "50")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.source").value("HORS_BOT"));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.source").value("HORS_BOT"))
+            .andExpect(jsonPath("$.limit_breach").value(org.hamcrest.Matchers.containsString("mise maximale")));
         mvc.perform(post("/api/v1/admin/pipeline/run").with(httpBasic("admin", "test-admin")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.recommendations").value(3));
         mvc.perform(get("/api/v1/opportunities?sport=tennis").with(httpBasic("admin", "test-admin")))
@@ -47,7 +50,8 @@ class ApiTest extends PostgresTest {
                 .content("{\"parameters\":{\"min_ev\":0.05,\"max_odds_age_minutes\":10,\"expiry_minutes\":30,\"paper_stake\":5}}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(2));
         mvc.perform(get("/api/v1/risk/status").with(httpBasic("admin", "test-admin")))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.exposure").value(50));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.exposure").value(500))
+            .andExpect(jsonPath("$.blocked").value(true));
     }
 
     @Test

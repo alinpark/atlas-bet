@@ -26,18 +26,64 @@ class RiskServiceTest extends PostgresTest {
         return error.getMessage();
     }
 
+    private String breach(String reference) {
+        return db.queryForObject("SELECT limit_breach FROM manual_bet WHERE reference=?", String.class, reference);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> blockedReasons() {
+        return (List<String>) risk.status().get("blocked_reasons");
+    }
+
     @Test
-    void recordsIdempotentlyAndRefusesStakesAboveAnyLimit() {
+    void declaredBetsAreAlwaysRecordedAndBreachesTraced() {
         risk.record(bet("a", "100", "2.10"));
         risk.record(bet("a", "100", "2.10"));
         assertEquals(1, db.queryForObject("SELECT count(*) FROM manual_bet", Integer.class));
+        assertNull(breach("a"));
         assertTrue(conflict(() -> risk.record(bet("a", "90", "2.10"))).contains("Référence déjà utilisée"));
-        // Une mise de 500 EUR reste refusée quelle que soit la probabilité affichée.
-        assertTrue(conflict(() -> risk.record(bet("big", "500", "1.50"))).contains("mise maximale"));
-        assertEquals(0, new BigDecimal("100").compareTo(Rows.decimal(risk.status(), "exposure")));
+        // Un pari de 500 EUR déjà placé est enregistré : le refuser masquerait une exposition réelle.
+        risk.record(bet("big", "500", "1.50"));
+        assertTrue(breach("big").contains("mise maximale"));
+        assertEquals(0, new BigDecimal("600").compareTo(Rows.decimal(risk.status(), "exposure")));
+        assertTrue(Boolean.TRUE.equals(risk.status().get("blocked")));
+        assertEquals(1, db.queryForObject("SELECT count(*) FROM audit_event WHERE action='limit_breached'", Integer.class));
+        // Données invalides : toujours refusées.
         assertThrows(ApiException.class, () -> risk.record(bet("bad", "10", "1.00")));
         assertThrows(ApiException.class, () -> risk.record(new RiskService.BetRequest("x", "l", "e", "m", "o", "b",
             new BigDecimal("2"), new BigDecimal("10.001"), "API", null)));
+    }
+
+    @Test
+    void preCheckReportsBreachesWithoutWriting() {
+        assertEquals(true, risk.check(new BigDecimal("50")).get("allowed"));
+        var refused = risk.check(new BigDecimal("500"));
+        assertEquals(false, refused.get("allowed"));
+        assertEquals(0, db.queryForObject("SELECT count(*) FROM manual_bet", Integer.class));
+    }
+
+    /** Revue Codex n° 1 : cinq paris ouverts de 100 EUR perdus le même jour malgré la limite de 250 EUR. */
+    @Test
+    void dailyLimitCountsOpenExposureAndBlocksConsistently() {
+        List<UUID> ids = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            ids.add((UUID) risk.record(bet("d" + i, "100", "2")).get("id"));
+        }
+        // 2 × 100 tiennent dans 250 ; le 3e mettrait 300 à risque aujourd'hui.
+        assertNull(breach("d0"));
+        assertNull(breach("d1"));
+        for (int i = 2; i < 5; i++) {
+            assertTrue(breach("d" + i).contains("perte quotidienne"), breach("d" + i));
+        }
+        assertTrue(Boolean.TRUE.equals(risk.status().get("blocked")));
+        assertTrue(blockedReasons().contains("perte quotidienne maximale atteinte"));
+        assertTrue(blockedReasons().contains("exposition simultanée maximale atteinte"));
+        ids.forEach(id -> risk.settle(id, "LOSS", BigDecimal.ZERO, null));
+        var status = risk.status();
+        assertEquals(0, new BigDecimal("500").compareTo(Rows.decimal(status, "daily_loss")));
+        assertTrue(Boolean.TRUE.equals(status.get("blocked")));
+        assertTrue(blockedReasons().contains("perte quotidienne maximale atteinte"));
+        assertEquals(0, BigDecimal.ZERO.compareTo(Rows.decimal(status, "remaining")));
     }
 
     @Test
@@ -56,33 +102,36 @@ class RiskServiceTest extends PostgresTest {
     }
 
     @Test
-    void openBetCorrectionKeepsHistoryAndRechecksLimits() {
+    void correctionReflectingAHigherRealStakeIsRecordedAndFlagged() {
         UUID id = (UUID) risk.record(bet("c", "50", "2.00")).get("id");
         assertThrows(ApiException.class, () -> risk.correct(id,
             new RiskService.Correction(null, null, null, null, null, null, new BigDecimal("60"), "")));
-        assertTrue(conflict(() -> risk.correct(id, new RiskService.Correction(null, null, null, null, null, null,
-            new BigDecimal("150"), "Mise réelle plus élevée"))).contains("mise maximale"));
         var updated = risk.correct(id, new RiskService.Correction(null, null, null, "away", "winamax_fr",
-            new BigDecimal("2.20"), new BigDecimal("60"), "Mauvaise issue saisie"));
+            new BigDecimal("2.20"), new BigDecimal("150"), "Mise réelle plus élevée"));
         assertEquals("away", updated.get("outcome"));
+        assertTrue(Rows.text(updated, "limit_breach").contains("mise maximale"));
         assertEquals(1, db.queryForObject("SELECT count(*) FROM manual_bet_correction", Integer.class));
-        assertEquals(0, new BigDecimal("60").compareTo(Rows.decimal(risk.status(), "exposure")));
+        assertEquals(0, new BigDecimal("150").compareTo(Rows.decimal(risk.status(), "exposure")));
+        assertTrue(Boolean.TRUE.equals(risk.status().get("blocked")));
     }
 
     @Test
-    void pauseBlocksRecordingAndResumeWaitsForCoolingOff() {
+    void betDeclaredDuringPauseIsRecordedAndResumeWaitsForCoolingOff() {
         risk.pause("test");
-        assertTrue(conflict(() -> risk.record(bet("p", "10", "2"))).contains("Pause"));
+        risk.record(bet("p", "10", "2"));
+        assertTrue(breach("p").contains("pause"));
         assertTrue(conflict(() -> risk.resume("test")).contains("Pause de 24 h"));
         db.update("UPDATE risk_policy SET resume_not_before=now() - interval '1 second' WHERE id");
         risk.resume("test");
-        risk.record(bet("p", "10", "2"));
-        assertEquals(List.of("pause", "manual_refused", "resume", "manual_recorded"),
+        risk.record(bet("q", "10", "2"));
+        assertNull(breach("q"));
+        assertEquals(List.of("pause", "manual_recorded", "limit_breached", "resume", "manual_recorded"),
             db.queryForList("SELECT action FROM audit_event ORDER BY id", String.class));
     }
 
     @Test
     void lowerCapAppliesNowHigherCapWaitsForNextParisMonthAndGainsDoNotRefill() {
+        db.update("UPDATE risk_policy SET max_daily_loss=2000 WHERE id");
         risk.setCap(new BigDecimal("150"));
         var scheduled = risk.setCap(new BigDecimal("1000"));
         assertEquals(0, new BigDecimal("150").compareTo(Rows.decimal(scheduled, "cap")));
@@ -95,34 +144,30 @@ class RiskServiceTest extends PostgresTest {
         UUID won = (UUID) risk.record(bet("g", "20", "3")).get("id");
         risk.settle(won, "WIN", new BigDecimal("60.00"), null);
         // 100 perdus : un gain ultérieur ne recrédite pas le plafond.
-        assertTrue(conflict(() -> risk.record(bet("over", "60", "2"))).contains("Plafond mensuel"));
+        assertEquals(false, risk.check(new BigDecimal("60")).get("allowed"));
         risk.record(bet("ok", "50", "2"));
+        assertNull(breach("ok"));
         assertTrue(Boolean.TRUE.equals(risk.status().get("blocked")));
+        assertTrue(blockedReasons().contains("plafond mensuel de pertes atteint"));
         assertThrows(ApiException.class, () -> risk.setCap(new BigDecimal("2000.01")));
     }
 
     @Test
-    void concurrentRecordsNeverExceedTheCap() throws Exception {
+    void concurrentDeclarationsAreSerializedAndFlaggedExactly() throws Exception {
         db.update("UPDATE risk_policy SET cap=300, max_daily_loss=2000 WHERE id");
         var pool = Executors.newFixedThreadPool(10);
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             String reference = "race-" + i;
-            tasks.add(() -> {
-                try {
-                    risk.record(bet(reference, "100", "2"));
-                    return true;
-                } catch (ApiException error) {
-                    return false;
-                }
-            });
+            tasks.add(() -> risk.record(bet(reference, "100", "2")).get("limit_breach") == null);
         }
-        long accepted = 0;
+        long withinLimits = 0;
         for (Future<Boolean> result : pool.invokeAll(tasks)) {
-            accepted += result.get() ? 1 : 0;
+            withinLimits += result.get() ? 1 : 0;
         }
         pool.shutdown();
-        assertEquals(3, accepted);
-        assertEquals(0, new BigDecimal("300").compareTo(Rows.decimal(risk.status(), "exposure")));
+        assertEquals(10, db.queryForObject("SELECT count(*) FROM manual_bet", Integer.class));
+        assertEquals(3, withinLimits);
+        assertEquals(0, new BigDecimal("1000").compareTo(Rows.decimal(risk.status(), "exposure")));
     }
 }

@@ -7,10 +7,10 @@ Exécutés sur ce poste (Windows 11, Docker 29.9.3, JDK 21.0.13, Python 3.12.10)
 | `scripts\run-tests.ps1` — `python -m unittest -v` | 13 tests, OK (dont Elo, lecture des CSV, validation) |
 | `scripts\fetch-history.ps1` — validation football Ligue 1 | 1 388 matchs de test, ROI −15,7 % → UNVALIDATED |
 | `scripts\run-tests.ps1` — tests du moteur FastAPI | 1 test, OK (3 sports, authentification, chronologie, /models/metrics) |
-| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 31 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1 à V3) |
+| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 38 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1 à V4), dont 9 issus de la contre-revue Codex ([détail](REVUE_CODEX_A8377DB.md)) |
 | Déploiement : classements réels | 18 équipes de Ligue 1, 9 matchs prédits, 6 paris virtuels réels, 0 notification réelle |
 | Déploiement local avec vraie clé et vrai bot | Cotes Ligue 1 collectées (1 crédit), 3 notifications DEMO reçues sur Telegram |
-| `scripts\smoke.ps1 -SkipBuild` | 10 étapes du §8 réussies, code 0, sur le stack Docker complet |
+| `scripts\smoke.ps1 -SkipBuild` | 10 étapes du §8 réussies, code 0, sur le stack Docker complet (étapes 7–8 : pari hors limites enregistré et signalé, propositions bloquées) |
 
 ## Tests backend (31)
 

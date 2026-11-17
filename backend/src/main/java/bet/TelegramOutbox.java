@@ -25,12 +25,15 @@ public class TelegramOutbox {
     private final ObjectMapper json;
     private final TelegramClient client;
     private final TelegramClient.Settings settings;
+    private final RiskService risk;
 
-    public TelegramOutbox(JdbcTemplate db, ObjectMapper json, TelegramClient client, TelegramClient.Settings settings) {
+    public TelegramOutbox(JdbcTemplate db, ObjectMapper json, TelegramClient client, TelegramClient.Settings settings,
+                          RiskService risk) {
         this.db = db;
         this.json = json;
         this.client = client;
         this.settings = settings;
+        this.risk = risk;
     }
 
     public void enqueue(String key, Long recommendation, String text, List<List<Button>> keyboard) {
@@ -55,14 +58,22 @@ public class TelegramOutbox {
             return 0;
         }
         var pending = db.queryForList("""
-            SELECT o.id, o.chat_id, o.payload::text AS payload, o.attempts FROM telegram_outbox o
-            WHERE o.chat_id IS NOT NULL AND o.available_at <= now() AND o.attempts < ?
+            SELECT o.id, o.chat_id, o.idempotency_key, o.recommendation_id, o.payload::text AS payload, o.attempts
+            FROM telegram_outbox o
+            WHERE o.chat_id IS NOT NULL AND o.available_at <= now() AND o.attempts < ? AND o.cancelled_at IS NULL
               AND NOT EXISTS (SELECT 1 FROM telegram_delivery d WHERE d.outbox_id=o.id)
             ORDER BY o.id LIMIT 20
             """, MAX_ATTEMPTS);
         int sent = 0;
+        Map<String, Object> status = pending.isEmpty() ? Map.of() : risk.status();
         for (var row : pending) {
             long id = Rows.number(row, "id");
+            String cancel = cancelReason(row, status);
+            if (cancel != null) {
+                db.update("UPDATE telegram_outbox SET cancelled_at=now(), cancel_reason=? WHERE id=?", cancel, id);
+                LOG.info("Message {} annulé avant envoi : {}", id, cancel);
+                continue;
+            }
             try {
                 JsonNode payload = json.readTree(Rows.text(row, "payload"));
                 List<List<Button>> keyboard = new ArrayList<>();
@@ -88,5 +99,33 @@ public class TelegramOutbox {
             }
         }
         return sent;
+    }
+
+    /**
+     * Revérifié à chaque tentative (y compris après un échec d'envoi) : une proposition ne part
+     * jamais pendant une pause ou au-delà d'une limite, ni pour une sélection devenue caduque.
+     */
+    private String cancelReason(Map<String, Object> row, Map<String, Object> status) {
+        String key = Rows.text(row, "idempotency_key");
+        Object recommendation = row.get("recommendation_id");
+        if (key.startsWith("rec:")) {
+            if (Boolean.TRUE.equals(status.get("blocked"))) {
+                return "blocage : " + String.join(", ", (List<String>) status.get("blocked_reasons"));
+            }
+            boolean valid = recommendation != null && Boolean.TRUE.equals(db.queryForObject("""
+                SELECT r.status='ACTIVE' AND o.expires_at > now() AND e.starts_at > now() AND e.status='SCHEDULED'
+                FROM recommendation r JOIN opportunity o ON o.id=r.opportunity_id JOIN event e ON e.id=r.event_id
+                WHERE r.id=?""", Boolean.class, recommendation));
+            return valid ? null : "sélection expirée, ignorée ou match commencé";
+        }
+        if (key.startsWith("expire:")) {
+            // Une alerte d'expiration n'a de sens que si la proposition a réellement été livrée.
+            String original = "rec:" + key.substring("expire:".length());
+            Long delivered = db.queryForObject("""
+                SELECT count(*) FROM telegram_outbox o JOIN telegram_delivery d ON d.outbox_id=o.id
+                WHERE o.idempotency_key=?""", Long.class, original);
+            return delivered > 0 ? null : "proposition initiale jamais livrée";
+        }
+        return null;
     }
 }

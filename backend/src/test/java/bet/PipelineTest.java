@@ -3,6 +3,7 @@ package bet;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,9 @@ class PipelineTest extends PostgresTest {
 
     @Autowired
     RiskService risk;
+
+    @Autowired
+    Reports reports;
 
     private int count(String table) {
         return db.queryForObject("SELECT count(*) FROM " + table, Integer.class);
@@ -66,6 +70,43 @@ class PipelineTest extends PostgresTest {
         assertEquals("WIN", results.get(1).get("result"));
         assertEquals(0, new BigDecimal("26.00").compareTo((BigDecimal) results.get(1).get("payout")));
         assertThrows(ApiException.class, () -> pipeline.demoResult("odds-api:real", "home", false));
+    }
+
+    /** Revue Codex n° 5 : métriques séparées par source, sport et version, seuil appliqué par groupe. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void predictionMetricsAreSplitBySourceSportAndModel() {
+        pipeline.runOnce();
+        String soccer = db.queryForObject("SELECT id FROM event WHERE id LIKE 'DEMO:soccer%'", String.class);
+        pipeline.demoResult(soccer, "home", false);
+        db.update("INSERT INTO competition VALUES ('soccer_france_ligue_one','soccer','Ligue 1')");
+        db.update("""
+            INSERT INTO event VALUES ('odds-api:r1','soccer_france_ligue_one','odds-api','r1',
+                                      now() - interval '1 day','COMPLETE')""");
+        var feature = db.queryForObject("""
+            INSERT INTO feature_snapshot(event_id,observed_at,provenance,features)
+            VALUES ('odds-api:r1', now() - interval '2 days', 'test', '{}') RETURNING id""", Long.class);
+        for (var entry : Map.of("home", "0.5", "draw", "0.3", "away", "0.2").entrySet()) {
+            db.update("""
+                INSERT INTO prediction(feature_id,market,model,outcome,p,observed_at)
+                VALUES (?,'soccer_h2h','poisson-elo-v2',?,?::numeric,now() - interval '2 days')
+                """, feature, entry.getKey(), entry.getValue());
+        }
+        db.update("""
+            INSERT INTO result_snapshot(event_id,source,observed_at,result)
+            VALUES ('odds-api:r1','football-data',now(),'{"winner":"away"}')""");
+        var groups = (List<Map<String, Object>>) reports.performanceData().get("predictions");
+        assertEquals(2, groups.size());
+        var real = groups.stream().filter(g -> "real".equals(g.get("source"))).findFirst().orElseThrow();
+        assertEquals("poisson-elo-v2", real.get("model"));
+        assertEquals(1L, ((Number) real.get("events")).longValue());
+        assertEquals(0.98, ((Number) real.get("brier")).doubleValue(), 1e-9); // 0,25 + 0,09 + 0,64
+        assertEquals(false, real.get("sufficient"));
+        var demo = groups.stream().filter(g -> "demo".equals(g.get("source"))).findFirst().orElseThrow();
+        assertEquals("poisson-rating-v1", demo.get("model"));
+        String text = reports.performance();
+        assertTrue(text.contains("DEMO · Football"), text);
+        assertTrue(text.contains("Réel · Football · poisson-elo-v2"), text);
     }
 
     @Test

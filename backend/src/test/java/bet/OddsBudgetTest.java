@@ -75,6 +75,29 @@ class OddsBudgetTest extends PostgresTest {
         assertEquals("QUOTA_LOW", db.queryForObject("SELECT status FROM provider_health WHERE id='odds-api'", String.class));
     }
 
+    /** Revue Codex n° 3 : un quota bas lu il y a 40 jours ne bloque plus ; un seul appel de vérification. */
+    @Test
+    void lowQuotaFromAPreviousMonthAllowsOneControlledProbe() {
+        Instant now = Instant.parse("2026-11-17T18:00:00Z");
+        db.update("""
+            INSERT INTO provider_health(id,status,quota_remaining,quota_at,checked_at)
+            VALUES ('odds-api','QUOTA_LOW',5,?,now())
+            """, Rows.sql(now.minus(Duration.ofDays(40))));
+        remaining = "15"; // le renouvellement n'a pas (encore) eu lieu
+        var api = api("soccer_france_ligue_one,tennis_atp_paris");
+        api.fetch(now);
+        assertEquals(1, calls.get()); // sonde unique : la seconde compétition reste bloquée
+        api.fetch(now.plus(Duration.ofHours(5)));
+        assertEquals(1, calls.get());
+        assertEquals("QUOTA_LOW", db.queryForObject("SELECT status FROM provider_health WHERE id='odds-api'", String.class));
+        // Mois suivant, crédits renouvelés : la collecte reprend normalement.
+        remaining = "500";
+        Instant nextMonth = Instant.parse("2026-12-01T08:00:00Z");
+        api.fetch(nextMonth);
+        assertEquals(3, calls.get());
+        assertEquals("UP", db.queryForObject("SELECT status FROM provider_health WHERE id='odds-api'", String.class));
+    }
+
     @Test
     void rateLimitBlocksTheProviderAndScoresAreSkippedForUnpredictedEvents() {
         status = 429;

@@ -3,6 +3,7 @@ package bet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,8 @@ public class RiskService {
                    coalesce(paused_until > now(), false) AS paused, resume_not_before,
                    (SELECT coalesce(sum(b.stake),0) FROM manual_bet b
                      WHERE NOT EXISTS (SELECT 1 FROM bet_settlement s WHERE s.manual_id=b.id)) AS exposure,
+                   EXISTS (SELECT 1 FROM manual_bet b WHERE b.limit_breach IS NOT NULL
+                     AND NOT EXISTS (SELECT 1 FROM bet_settlement s WHERE s.manual_id=b.id)) AS open_breach,
                    (SELECT coalesce(sum(greatest(0,b.stake-s.payout)),0) FROM manual_bet b
                      JOIN bet_settlement s ON s.manual_id=b.id
                      WHERE s.settled_at >= date_trunc('month', now(), 'Europe/Paris')) AS monthly_loss,
@@ -63,37 +66,76 @@ public class RiskService {
                      AT TIME ZONE 'Europe/Paris' AS reset_at
             FROM risk_policy WHERE id
             """));
-        BigDecimal cap = Rows.decimal(row, "cap");
-        BigDecimal used = Rows.decimal(row, "monthly_loss").add(Rows.decimal(row, "exposure"));
-        row.put("remaining", cap.subtract(used).max(BigDecimal.ZERO));
-        row.put("blocked", Boolean.TRUE.equals(row.get("paused")) || used.compareTo(cap) >= 0);
+        // Toute mise ouverte peut être perdue aujourd'hui : chaque limite de perte compte l'exposition.
+        BigDecimal exposure = Rows.decimal(row, "exposure");
+        BigDecimal monthlyRoom = Rows.decimal(row, "cap").subtract(Rows.decimal(row, "monthly_loss")).subtract(exposure);
+        BigDecimal dailyRoom = Rows.decimal(row, "max_daily_loss").subtract(Rows.decimal(row, "daily_loss")).subtract(exposure);
+        BigDecimal exposureRoom = Rows.decimal(row, "max_exposure").subtract(exposure);
+        BigDecimal remaining = monthlyRoom.min(dailyRoom).min(exposureRoom);
+        List<String> reasons = new ArrayList<>();
+        if (Boolean.TRUE.equals(row.get("paused"))) {
+            reasons.add("pause active");
+        }
+        if (monthlyRoom.signum() <= 0) {
+            reasons.add("plafond mensuel de pertes atteint");
+        }
+        if (dailyRoom.signum() <= 0) {
+            reasons.add("perte quotidienne maximale atteinte");
+        }
+        if (exposureRoom.signum() <= 0) {
+            reasons.add("exposition simultanée maximale atteinte");
+        }
+        // Un pari ouvert enregistré hors limites bloque les propositions jusqu'à son règlement.
+        if (Boolean.TRUE.equals(row.get("open_breach"))) {
+            reasons.add("pari ouvert enregistré hors limites");
+        }
+        row.put("remaining", remaining.max(BigDecimal.ZERO));
+        row.put("remaining_monthly", monthlyRoom.max(BigDecimal.ZERO));
+        row.put("remaining_daily", dailyRoom.max(BigDecimal.ZERO));
+        row.put("remaining_exposure", exposureRoom.max(BigDecimal.ZERO));
+        row.put("blocked", !reasons.isEmpty());
+        row.put("blocked_reasons", reasons);
         return row;
     }
 
-    /** Raison du refus d'une mise supplémentaire, ou null si elle respecte tous les plafonds. */
-    static String refusal(Map<String, Object> risk, BigDecimal additional, BigDecimal stake) {
+    /** Limites qu'une mise supplémentaire dépasserait (liste vide = dans toutes les limites). */
+    static List<String> breaches(Map<String, Object> risk, BigDecimal additional, BigDecimal stake) {
+        List<String> reasons = new ArrayList<>();
         if (Boolean.TRUE.equals(risk.get("paused"))) {
-            return "Pause active : aucun nouveau pari ne peut être enregistré.";
+            reasons.add("pari pendant une pause");
         }
         if (stake.compareTo(Rows.decimal(risk, "max_stake")) > 0) {
-            return "Mise supérieure à la mise maximale unitaire (" + Rows.euros(Rows.decimal(risk, "max_stake")) + ").";
+            reasons.add("mise supérieure à la mise maximale unitaire (" + Rows.euros(Rows.decimal(risk, "max_stake")) + ")");
         }
         BigDecimal exposure = Rows.decimal(risk, "exposure").add(additional);
         if (exposure.compareTo(Rows.decimal(risk, "max_exposure")) > 0) {
-            return "Exposition simultanée maximale dépassée (" + Rows.euros(Rows.decimal(risk, "max_exposure")) + ").";
+            reasons.add("exposition simultanée maximale dépassée (" + Rows.euros(Rows.decimal(risk, "max_exposure")) + ")");
         }
         if (exposure.add(Rows.decimal(risk, "monthly_loss")).compareTo(Rows.decimal(risk, "cap")) > 0) {
-            return "Plafond mensuel de pertes atteint (" + Rows.euros(Rows.decimal(risk, "cap")) + ").";
+            reasons.add("plafond mensuel de pertes dépassé (" + Rows.euros(Rows.decimal(risk, "cap")) + ")");
         }
-        // Une mise du jour peut être perdue le jour même : pertes du jour + nouvelle mise.
-        if (additional.add(Rows.decimal(risk, "daily_loss")).compareTo(Rows.decimal(risk, "max_daily_loss")) > 0) {
-            return "Perte quotidienne maximale atteinte (" + Rows.euros(Rows.decimal(risk, "max_daily_loss")) + ").";
+        if (exposure.add(Rows.decimal(risk, "daily_loss")).compareTo(Rows.decimal(risk, "max_daily_loss")) > 0) {
+            reasons.add("perte quotidienne maximale dépassée (" + Rows.euros(Rows.decimal(risk, "max_daily_loss")) + ")");
         }
-        return null;
+        return reasons;
     }
 
-    /** Les refus sont journalisés : la transaction n'écrit alors que la ligne d'audit. */
-    @Transactional(noRollbackFor = ApiException.class)
+    /** Contrôle préalable, sans écriture : une nouvelle mise de ce montant respecterait-elle les limites ? */
+    @Transactional(readOnly = true)
+    public Map<String, Object> check(BigDecimal stake) {
+        if (stake == null || stake.signum() <= 0 || stake.scale() > 2) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Mise invalide.");
+        }
+        List<String> reasons = breaches(computeStatus(), stake, stake);
+        return Map.of("allowed", reasons.isEmpty(), "reasons", reasons);
+    }
+
+    /**
+     * Un pari déclaré est un engagement DÉJÀ pris chez le bookmaker : il est toujours
+     * enregistré (le refuser masquerait une exposition réelle). Un dépassement de limite est
+     * tracé (limit_breach, audit) et bloque les nouvelles propositions.
+     */
+    @Transactional
     public Map<String, Object> record(BetRequest request) {
         validate(request);
         lockPolicy();
@@ -112,19 +154,20 @@ public class RiskService {
             }
             return old;
         }
-        String refusal = refusal(computeStatus(), request.stake(), request.stake());
-        if (refusal != null) {
-            audit("manual_refused", request.reference(), Map.of("reason", refusal, "stake", request.stake()));
-            throw new ApiException(HttpStatus.CONFLICT, refusal);
-        }
+        List<String> breaches = breaches(computeStatus(), request.stake(), request.stake());
+        String breach = breaches.isEmpty() ? null : String.join(" ; ", breaches);
         UUID id = UUID.randomUUID();
         var row = db.queryForMap("""
-            INSERT INTO manual_bet(id,reference,label,stake,event_ref,market,outcome,bookmaker,odds,source,opportunity_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING *
+            INSERT INTO manual_bet(id,reference,label,stake,event_ref,market,outcome,bookmaker,odds,source,
+                                   opportunity_id,limit_breach)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *
             """, id, request.reference(), request.label(), request.stake(), request.eventRef(), request.market(),
-            request.outcome(), request.bookmaker(), request.odds(), request.source(), request.opportunityId());
+            request.outcome(), request.bookmaker(), request.odds(), request.source(), request.opportunityId(), breach);
         db.update("INSERT INTO risk_ledger(manual_id,amount,action) VALUES (?,?,'RESERVED')", id, request.stake());
         audit("manual_recorded", id.toString(), Map.of("source", request.source(), "stake", request.stake()));
+        if (breach != null) {
+            audit("limit_breached", id.toString(), Map.of("reasons", breaches, "stake", request.stake()));
+        }
         return row;
     }
 
@@ -151,20 +194,23 @@ public class RiskService {
             Rows.text(old, "source"), null);
         validate(next);
         BigDecimal delta = next.stake().subtract(Rows.decimal(old, "stake"));
+        // Une correction reflète la mise réellement engagée : jamais refusée, dépassement tracé.
+        String breach = Rows.text(old, "limit_breach");
         if (delta.signum() > 0) {
-            String refusal = refusal(computeStatus(), delta, next.stake());
-            if (refusal != null) {
-                throw new ApiException(HttpStatus.CONFLICT, refusal);
+            List<String> breaches = breaches(computeStatus(), delta, next.stake());
+            if (!breaches.isEmpty()) {
+                breach = String.join(" ; ", breaches);
+                audit("limit_breached", id.toString(), Map.of("reasons", breaches, "correction", true));
             }
         }
         db.update("""
             INSERT INTO manual_bet_correction(manual_id,previous,corrected,reason) VALUES (?,?::jsonb,?::jsonb,?)
             """, id, write(old), write(next), correction.reason().strip());
         var updated = db.queryForMap("""
-            UPDATE manual_bet SET label=?,event_ref=?,market=?,outcome=?,bookmaker=?,odds=?,stake=?
+            UPDATE manual_bet SET label=?,event_ref=?,market=?,outcome=?,bookmaker=?,odds=?,stake=?,limit_breach=?
             WHERE id=? RETURNING *
             """, next.label(), next.eventRef(), next.market(), next.outcome(), next.bookmaker(), next.odds(),
-            next.stake(), id);
+            next.stake(), breach, id);
         if (delta.signum() != 0) {
             db.update("INSERT INTO risk_ledger(manual_id,amount,action) VALUES (?,?,'CORRECTED')", id, delta);
         }

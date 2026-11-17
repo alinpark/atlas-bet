@@ -225,7 +225,7 @@ public class TelegramBot {
                 save(chatId, state);
                 List<Button> buttons = new ArrayList<>();
                 for (String outcome : Providers.OUTCOMES.get(state.path("sport").asText())) {
-                    buttons.add(new Button(label(state, outcome), "out:" + outcome));
+                    buttons.add(new Button(label(state, outcome), "out:" + token(state) + ":" + outcome));
                 }
                 send(chatId, "Étape 3/5 — Issue jouée ?", List.of(buttons));
             }
@@ -233,12 +233,24 @@ public class TelegramBot {
         }
     }
 
-    private void step(long chatId, String action, String value) {
+    /** Jeton de la saisie en cours, inclus dans chaque bouton de saisie (64 octets max côté Telegram). */
+    private static String token(JsonNode state) {
+        return state.path("nonce").asText().replace("-", "").substring(0, 12);
+    }
+
+    private void step(long chatId, String action, String data) {
         ObjectNode state = load(chatId);
         if (state == null) {
             send(chatId, "Aucune saisie en cours.", List.of());
             return;
         }
+        // Un bouton d'une saisie précédente ne doit jamais agir sur la saisie actuelle.
+        String[] parts = data.split(":", 2);
+        if (!token(state).equals(parts[0])) {
+            send(chatId, "Bouton périmé : il appartient à une autre saisie. Rien n'a été enregistré.", List.of());
+            return;
+        }
+        String value = parts.length > 1 ? parts[1] : "";
         String step = state.path("step").asText();
         if ("no".equals(action)) {
             db.update("DELETE FROM telegram_session WHERE chat_id=?", chatId);
@@ -255,7 +267,7 @@ public class TelegramBot {
             List<List<Button>> rows = new ArrayList<>();
             for (int i = 0; i < books.size(); i += 3) {
                 rows.add(books.subList(i, Math.min(i + 3, books.size())).stream()
-                    .map(book -> new Button(book, "bk:" + book)).toList());
+                    .map(book -> new Button(book, "bk:" + token(state) + ":" + book)).toList());
             }
             send(chatId, "Étape 4/5 — Bookmaker utilisé ?", rows);
         } else if ("bk".equals(action) && "bookmaker".equals(step)
@@ -263,17 +275,24 @@ public class TelegramBot {
             state.put("bookmaker", value);
             state.put("step", "confirm");
             save(chatId, state);
-            send(chatId, "Étape 5/5 — Confirmer l'enregistrement ?\n" + summary(state),
-                List.of(List.of(new Button("Confirmer", "ok"), new Button("Annuler", "no"))));
+            // Contrôle préalable affiché : le pari est déjà placé, il sera enregistré quand même.
+            List<String> breaches = (List<String>) risk.check(new BigDecimal(state.path("stake").asText())).get("reasons");
+            String warning = breaches.isEmpty() ? "" : "\n\nATTENTION, ce pari dépasse tes limites : "
+                + String.join(" ; ", breaches) + ".\nIl sera enregistré tel quel et les nouvelles sélections seront bloquées.";
+            send(chatId, "Étape 5/5 — Confirmer l'enregistrement ?\n" + summary(state) + warning,
+                List.of(List.of(new Button("Confirmer", "ok:" + token(state)), new Button("Annuler", "no:" + token(state)))));
         } else if ("ok".equals(action) && "confirm".equals(step)) {
             db.update("DELETE FROM telegram_session WHERE chat_id=?", chatId);
             try {
-                risk.record(new RiskService.BetRequest("tg-" + state.path("nonce").asText(),
+                var bet = risk.record(new RiskService.BetRequest("tg-" + state.path("nonce").asText(),
                     "Telegram — " + state.path("match").asText(), state.path("event").asText(),
                     state.path("market").asText(), state.path("outcome").asText(), state.path("bookmaker").asText(),
                     new BigDecimal(state.path("odds").asText()), new BigDecimal(state.path("stake").asText()),
                     "TELEGRAM", state.path("opportunity").asLong()));
-                send(chatId, "Pari enregistré.\n" + summary(state) + "\n\n" + reports.budget(), List.of());
+                String breach = Rows.text(bet, "limit_breach");
+                send(chatId, "Pari enregistré.\n" + summary(state)
+                    + (breach == null ? "" : "\n\nDÉPASSEMENT ENREGISTRÉ : " + breach + ".")
+                    + "\n\n" + reports.budget(), List.of());
             } catch (ApiException error) {
                 send(chatId, "Pari NON enregistré : " + error.getMessage(), List.of());
             }

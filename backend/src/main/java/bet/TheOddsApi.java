@@ -47,6 +47,8 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     private final Duration scoresInterval;
     private final int quotaFloor;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    /** Instant logique du cycle en cours (horloge injectable pour les tests). */
+    private volatile Instant quotaReadAt = Instant.now();
 
     /**
      * Budget de crédits : chaque compétition n'est interrogée qu'une fois par oddsInterval,
@@ -77,13 +79,27 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         if (!last.isEmpty() && Instant.parse(last.getFirst()).plus(interval).isAfter(now)) {
             return false;
         }
-        Integer remaining = db.query("SELECT quota_remaining FROM provider_health WHERE id=?",
-            rs -> rs.next() ? (Integer) rs.getObject(1) : null, SOURCE);
-        if (remaining != null && remaining <= quotaFloor) {
-            health("QUOTA_LOW", "Crédits restants " + remaining + " ≤ plancher " + quotaFloor, null, null, null);
-            return false;
+        var quota = db.queryForList("SELECT quota_remaining, quota_at FROM provider_health WHERE id=?", SOURCE);
+        if (quota.isEmpty() || quota.getFirst().get("quota_remaining") == null) {
+            return true;
         }
-        return true;
+        int remaining = ((Number) quota.getFirst().get("quota_remaining")).intValue();
+        if (remaining > quotaFloor) {
+            return true;
+        }
+        // Les crédits sont renouvelés le 1er du mois : un quota bas lu un mois précédent n'est
+        // plus une preuve. Un seul appel de vérification est alors permis ; sa réponse met à jour
+        // quota_at, donc si le quota est toujours bas les appels suivants restent bloqués.
+        Instant readAt = Rows.instant(quota.getFirst(), "quota_at");
+        boolean renewed = readAt == null || !java.time.YearMonth.from(readAt.atZone(java.time.ZoneOffset.UTC))
+            .equals(java.time.YearMonth.from(now.atZone(java.time.ZoneOffset.UTC)));
+        if (renewed) {
+            LOG.info("Quota bas lu le {} : appel de vérification après renouvellement mensuel", readAt);
+            return true;
+        }
+        health("QUOTA_LOW", "Crédits restants " + remaining + " ≤ plancher " + quotaFloor
+            + " ; reprise au renouvellement mensuel", null, null, null);
+        return false;
     }
 
     private void spent(String slot, Instant now) {
@@ -102,6 +118,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
 
     @Override
     public List<OddsEvent> fetch(Instant now) {
+        quotaReadAt = now;
         if (!configured()) {
             health("NOT_CONFIGURED", "THE_ODDS_API_KEY ou SPORTS_ODDS_COMPETITIONS absent", null, null, null);
             return List.of();
@@ -131,6 +148,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
 
     @Override
     public List<Result> results(List<Map<String, Object>> pendingEvents, Instant now) {
+        quotaReadAt = now;
         if (!configured() || blocked()) {
             return List.of();
         }
@@ -298,12 +316,14 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
 
     private void health(String status, String detail, Integer remaining, Integer used, Instant blockedUntil) {
         db.update("""
-            INSERT INTO provider_health(id,status,detail,quota_remaining,quota_used,blocked_until,checked_at)
-            VALUES (?,?,?,?,?,?,now())
+            INSERT INTO provider_health(id,status,detail,quota_remaining,quota_used,blocked_until,checked_at,quota_at)
+            VALUES (?,?,?,?,?,?,now(),?)
             ON CONFLICT (id) DO UPDATE SET status=EXCLUDED.status, detail=EXCLUDED.detail,
               quota_remaining=coalesce(EXCLUDED.quota_remaining, provider_health.quota_remaining),
               quota_used=coalesce(EXCLUDED.quota_used, provider_health.quota_used),
+              quota_at=coalesce(EXCLUDED.quota_at, provider_health.quota_at),
               blocked_until=EXCLUDED.blocked_until, checked_at=now()
-            """, SOURCE, status, detail, remaining, used, Rows.sql(blockedUntil));
+            """, SOURCE, status, detail, remaining, used, Rows.sql(blockedUntil),
+            Rows.sql(remaining == null ? null : quotaReadAt));
     }
 }

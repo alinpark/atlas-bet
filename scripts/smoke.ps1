@@ -54,6 +54,14 @@ function Run-Pipeline {
 
 function LastSent { (@(Api GET '/admin/telegram/sent'))[-1].text }
 
+# Données d'un bouton du dernier message (les boutons de saisie portent un jeton de session).
+function Btn([string]$Action, [string]$Value = '') {
+    $buttons = @((@(Api GET '/admin/telegram/sent'))[-1].buttons)
+    $found = $buttons | Where-Object { $_ -like "${Action}:*" -and ($Value -eq '' -or $_ -like "*:$Value") } | Select-Object -First 1
+    if (-not $found) { throw "ECHEC : bouton $Action introuvable" }
+    $found
+}
+
 function Wait-Outbox([int]$Expected) {
     for ($i = 0; $i -lt 30; $i++) {
         $delivered = @(Api GET '/admin/outbox' | Where-Object { $_.delivered_at }).Count
@@ -88,9 +96,10 @@ Check (@(Api GET '/paper-bets').Count -eq 3) 'paris virtuels créés'
 
 Write-Output '5. « J''ai parié » via callback Telegram simulé (100 EUR)'
 $rec = ($recommendations | Where-Object { $_.event_id -eq $soccer }).id
-Click "bet:$rec"; Say '100'; Say '2,6'; Click 'out:home'; Click 'bk:winamax_fr'; Click 'ok'
+Click "bet:$rec"; Say '100'; Say '2,6'; Click (Btn 'out' 'home'); Click (Btn 'bk' 'winamax_fr')
+$confirm = Btn 'ok'; Click $confirm
 Check ((LastSent) -like '*Pari enregistr*') 'pari confirmé et enregistré'
-Click 'ok'
+Click $confirm
 Check (@(Api GET '/manual-bets').Count -eq 1) 'callback rejoué sans doublon'
 
 Write-Output '6. Exposition, règlement et budget'
@@ -105,16 +114,19 @@ $paper = @(Api GET '/paper-bets' | Where-Object { $_.event_id -eq $soccer })[0]
 Check ($paper.result -eq 'WIN') 'pari virtuel réglé depuis le résultat DEMO'
 
 Write-Output '7. Mise de 500 EUR'
+Check ((Api POST '/risk/check' @{ stake = 500 }).allowed -eq $false) 'contrôle préalable : 500 EUR hors limites'
 $big = @{ reference = 'smoke-500'; label = 'Hors bot'; eventRef = 'DEMO'; market = 'soccer_h2h'; outcome = 'home';
           bookmaker = 'winamax_fr'; odds = 2.1; stake = 500; source = 'HORS_BOT' }
-Check ((StatusOf POST '/manual-bets' $big) -eq 409) 'refusée (mise maximale unitaire)'
+$declared = Api POST '/manual-bets' $big
+Check ($declared.limit_breach -like '*mise maximale*') 'pari déjà placé : enregistré, dépassement tracé'
+Check ((Api GET '/risk/status').blocked -eq $true) 'propositions bloquées tant que ce pari est ouvert'
+Api POST "/manual-bets/$($declared.id)/settle" @{ result = 'VOID'; payout = 500 } | Out-Null
 
 Write-Output '8. Limite globale de pertes atteinte'
 Api POST '/admin/risk/cap' @{ cap = 150 } | Out-Null
-$over = $big.Clone(); $over.reference = 'smoke-60'; $over.stake = 60
-Check ((StatusOf POST '/manual-bets' $over) -eq 409) '60 EUR refusés : 100 perdus + 60 > 150'
+Check ((Api POST '/risk/check' @{ stake = 60 }).allowed -eq $false) '60 EUR hors limites : 100 perdus + 60 > 150'
 $fit = $big.Clone(); $fit.reference = 'smoke-50'; $fit.stake = 50
-Check ((StatusOf POST '/manual-bets' $fit) -eq 200) '50 EUR acceptés (exactement au plafond)'
+Check ($null -eq (Api POST '/manual-bets' $fit).limit_breach) '50 EUR dans les limites (exactement au plafond)'
 Check ((Api GET '/risk/status').blocked -eq $true) 'statut bloqué'
 function Proposals { @(Api GET '/admin/outbox' | Where-Object { $_.idempotency_key -like 'rec:*' }).Count }
 $proposalsBefore = Proposals
@@ -136,7 +148,7 @@ Write-Output '10. Redémarrage, persistance et absence de doublons'
 Invoke-Checked { & docker @compose stop } 'docker compose stop'
 Invoke-Checked { & docker @compose up -d --wait } 'docker compose up (redémarrage)'
 Run-Pipeline | Out-Null
-Check (@(Api GET '/manual-bets').Count -eq 2) 'paris réels conservés (2)'
+Check (@(Api GET '/manual-bets').Count -eq 3) 'paris réels conservés (3)'
 Check (@(Api GET '/recommendations').Count -eq 3) 'pas de recommandation en double'
 Check (@(Api GET '/paper-bets').Count -eq 3) 'pas de pari virtuel en double'
 Check (@(Api GET '/admin/outbox').Count -eq $outboxBefore) 'pas de notification en double'

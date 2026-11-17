@@ -343,7 +343,7 @@ public class Pipeline {
         var status = risk.status();
         if (Boolean.TRUE.equals(status.get("blocked"))) {
             risk.audit("notification_suppressed", String.valueOf(recommendation),
-                Map.of("reason", Boolean.TRUE.equals(status.get("paused")) ? "pause" : "plafond"));
+                Map.of("reasons", status.get("blocked_reasons")));
         } else {
             outbox.enqueue("rec:" + recommendation, recommendation, reports.recommendationMessage(recommendation),
                 reports.recommendationKeyboard(recommendation));

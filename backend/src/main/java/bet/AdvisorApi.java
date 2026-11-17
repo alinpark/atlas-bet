@@ -191,6 +191,14 @@ class AdvisorApi {
         return risk.status();
     }
 
+    record CheckRequest(BigDecimal stake) {}
+
+    /** Contrôle préalable d'une mise envisagée (aucune écriture). */
+    @PostMapping("/risk/check")
+    Map<String, Object> riskCheck(@RequestBody CheckRequest request) {
+        return risk.check(request.stake());
+    }
+
     @GetMapping("/performance")
     Map<String, Object> performance() {
         return reports.performanceData();

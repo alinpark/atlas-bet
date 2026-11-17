@@ -30,6 +30,8 @@ public class Reports {
         """;
     private static final Map<String, String> SPORTS = Map.of("soccer", "Football", "tennis", "Tennis",
         "basketball", "Basketball");
+    /** Seuil d'échantillon appliqué à chaque groupe (source × sport × modèle). */
+    static final int MIN_SAMPLE = 30;
 
     private final JdbcTemplate db;
     private final RiskService risk;
@@ -128,7 +130,7 @@ public class Reports {
             """);
         StringBuilder text = new StringBuilder();
         if (Boolean.TRUE.equals(status.get("blocked"))) {
-            text.append("BLOCAGE : ").append(Boolean.TRUE.equals(status.get("paused")) ? "pause active" : "plafond de pertes atteint")
+            text.append("BLOCAGE : ").append(String.join(", ", (List<String>) status.get("blocked_reasons")))
                 .append(". Aucune nouvelle proposition de mise.\n\n");
         }
         if (rows.isEmpty()) {
@@ -166,7 +168,8 @@ public class Reports {
     }
 
     public Map<String, Object> performanceData() {
-        var predictions = db.queryForMap("""
+        // Une ligne par source (DEMO / réel), sport et version de modèle : jamais d'agrégat mélangé.
+        var predictions = db.queryForList("""
             WITH last_feature AS (
               SELECT DISTINCT ON (f.event_id) f.id, f.event_id FROM feature_snapshot f
               JOIN event e ON e.id=f.event_id WHERE f.observed_at < e.starts_at
@@ -174,11 +177,15 @@ public class Reports {
             res AS (
               SELECT DISTINCT ON (event_id) event_id, result->>'winner' AS winner FROM result_snapshot
               WHERE result->>'winner' IS NOT NULL ORDER BY event_id, observed_at DESC)
-            SELECT count(DISTINCT lf.event_id) AS events,
+            SELECT CASE WHEN e.source='DEMO' THEN 'demo' ELSE 'real' END AS source, c.sport, p.model,
+                   count(DISTINCT lf.event_id) AS events,
                    sum(power(p.p - CASE WHEN p.outcome=res.winner THEN 1 ELSE 0 END, 2))
-                     / nullif(count(DISTINCT lf.event_id),0) AS brier
+                     / nullif(count(DISTINCT lf.event_id),0) AS brier,
+                   count(DISTINCT lf.event_id) >= ? AS sufficient
             FROM last_feature lf JOIN res ON res.event_id=lf.event_id JOIN prediction p ON p.feature_id=lf.id
-            """);
+            JOIN event e ON e.id=lf.event_id JOIN competition c ON c.id=e.competition
+            GROUP BY 1, 2, 3 ORDER BY 1 DESC, 2, 3
+            """, MIN_SAMPLE);
         var bets = db.queryForList("""
             SELECT 'manual' AS kind, count(*) AS settled, coalesce(sum(b.stake),0) AS stake,
                    coalesce(sum(s.payout-b.stake),0) AS net
@@ -215,15 +222,18 @@ public class Reports {
     public String performance() {
         var data = performanceData();
         @SuppressWarnings("unchecked")
-        var predictions = (Map<String, Object>) data.get("predictions");
-        long events = ((Number) predictions.get("events")).longValue();
-        StringBuilder text = new StringBuilder("Prédictions évaluées : ").append(events);
-        if (events > 0) {
-            text.append(", score de Brier ").append(String.format(Locale.FRENCH, "%.3f",
-                ((Number) predictions.get("brier")).doubleValue()));
+        var predictions = (List<Map<String, Object>>) data.get("predictions");
+        StringBuilder text = new StringBuilder("Prédictions évaluées :");
+        if (predictions.isEmpty()) {
+            text.append(" aucune (pas encore de résultat connu).");
         }
-        if (events < 30) {
-            text.append(" (échantillon trop faible pour conclure)");
+        for (var group : predictions) {
+            text.append("\n- ").append("demo".equals(group.get("source")) ? "DEMO" : "Réel").append(" · ")
+                .append(SPORTS.get(group.get("sport"))).append(" · ").append(group.get("model")).append(" : ")
+                .append(group.get("events")).append(" match(s), Brier ")
+                .append(String.format(Locale.FRENCH, "%.3f", ((Number) group.get("brier")).doubleValue()))
+                .append(Boolean.TRUE.equals(group.get("sufficient")) ? ""
+                    : " (moins de " + MIN_SAMPLE + " matchs : trop peu pour conclure)");
         }
         @SuppressWarnings("unchecked")
         var bets = (List<Map<String, Object>>) data.get("bets");
@@ -275,7 +285,14 @@ public class Reports {
             text += "\nPause active, reprise possible après le " + Rows.paris(Rows.instant(status, "resume_not_before"));
         }
         if (Boolean.TRUE.equals(status.get("blocked"))) {
-            text += "\nBLOCAGE : aucune nouvelle mise ne peut être enregistrée.";
+            text += "\nBLOCAGE (" + String.join(", ", (List<String>) status.get("blocked_reasons"))
+                + ") : aucune nouvelle sélection ne sera proposée.";
+        }
+        long breaches = db.queryForObject("""
+            SELECT count(*) FROM manual_bet b WHERE b.limit_breach IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM bet_settlement s WHERE s.manual_id=b.id)""", Long.class);
+        if (breaches > 0) {
+            text += "\n" + breaches + " pari(s) ouvert(s) enregistré(s) au-delà de tes limites.";
         }
         return text + "\nLes gains ne rechargent pas le budget. " + ANJ;
     }

@@ -4,14 +4,25 @@
 que les paris que vous déclarez (bot « J'ai parié » ou API). Un pari non déclaré rend le
 calcul faux : déclarez tout, y compris les paris faits hors bot (`source = HORS_BOT`).
 
+## Déclarer n'est pas proposer
+
+- **Un pari déclaré est un engagement déjà pris** : il est toujours enregistré, même au-delà
+  d'une limite ou pendant une pause (le refuser masquerait une exposition réelle). Le
+  dépassement est tracé (`manual_bet.limit_breach`, audit `limit_breached`) et affiché.
+- **Les limites contrôlent les propositions** : dès qu'une limite est atteinte, ou qu'un pari
+  ouvert a été enregistré hors limites, `blocked` est vrai et **aucune nouvelle sélection
+  n'est proposée** (notification supprimée, envoi annulé même s'il était déjà en file).
+- **Contrôle préalable** : `POST /api/v1/risk/check {"stake": …}` ; dans Telegram, un
+  avertissement s'affiche avant la confirmation.
+
 ## Règles (table `risk_policy`, valeurs par défaut)
 
-| Règle | Valeur | Calcul |
+| Règle | Valeur | Calcul (toute mise ouverte peut être perdue aujourd'hui) |
 |---|---|---|
-| Plafond mensuel de pertes réelles | 2 000 EUR (maximum codé) | pertes réglées du mois + toutes les mises ouvertes + nouvelle mise ≤ plafond |
-| Mise maximale unitaire | 100 EUR | une mise de 500 EUR est refusée quelle que soit la probabilité affichée |
+| Plafond mensuel de pertes réelles | 2 000 EUR (maximum codé) | pertes réglées du mois + mises ouvertes + nouvelle mise ≤ plafond |
+| Mise maximale unitaire | 100 EUR | une mise de 500 EUR est signalée hors limites quelle que soit la probabilité affichée |
 | Exposition simultanée | 500 EUR | mises ouvertes + nouvelle mise |
-| Perte quotidienne | 250 EUR | pertes réglées du jour + nouvelle mise |
+| Perte quotidienne | 250 EUR | pertes réglées du jour + mises ouvertes + nouvelle mise |
 | Pause | ≥ 24 h | `/pause` ou `POST /admin/pause` ; `/resume` refusé avant 24 h |
 
 - **Mois civil Europe/Paris.** La remise à zéro a lieu à minuit heure de Paris le 1er
@@ -26,12 +37,12 @@ calcul faux : déclarez tout, y compris les paris faits hors bot (`source = HORS
 - **Règlements** : WIN = mise × cote enregistrée (arrondi au centime, tolérance 0,01),
   LOSS = 0, PUSH/VOID = mise. Une correction exige un motif et crée une révision
   (`settlement_history`) ; un pari ouvert se corrige par `PATCH` avec motif
-  (`manual_bet_correction`), la hausse de mise étant revérifiée.
-- **Concurrence** : toutes les écritures verrouillent `risk_policy` ; deux saisies
-  simultanées ne peuvent pas dépasser ensemble un plafond.
-- **Refus journalisés** dans `audit_event` (`manual_refused`).
-- **Blocage** : plafond atteint ou pause → aucune notification de nouvelle sélection
-  (`notification_suppressed`), `/today` et `/budget` affichent « BLOCAGE ».
+  (`manual_bet_correction`) ; une hausse de mise est enregistrée et, si elle dépasse une
+  limite, signalée.
+- **Concurrence** : toutes les écritures verrouillent `risk_policy` ; des déclarations
+  simultanées sont sérialisées et le dépassement est attribué exactement aux bonnes.
+- **Blocage** : `blocked_reasons` liste pause, plafond mensuel, perte quotidienne,
+  exposition et pari ouvert hors limites ; `/today` et `/budget` affichent « BLOCAGE ».
 
 ## Limites ANJ
 

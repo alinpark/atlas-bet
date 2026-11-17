@@ -52,6 +52,15 @@ class TelegramTest extends PostgresTest {
         return (String) sent.getLast().get("text");
     }
 
+    /** Données d'un bouton du dernier message (ex. « out:<jeton>:home »), comme les verrait l'utilisateur. */
+    @SuppressWarnings("unchecked")
+    private String button(String action, String value) {
+        var buttons = (List<String>) recording().sent().getLast().get("buttons");
+        return buttons.stream().filter(data -> data.startsWith(action + ":")
+                && (value == null || data.endsWith(":" + value))).findFirst()
+            .orElseThrow(() -> new AssertionError("bouton " + action + " absent : " + buttons));
+    }
+
     private long recommendation() {
         pipeline.runOnce();
         return db.queryForObject("SELECT r.id FROM recommendation r WHERE r.event_id LIKE 'DEMO:soccer%'", Long.class);
@@ -64,10 +73,11 @@ class TelegramTest extends PostgresTest {
         bot.handle(text(1000, "private", "25"));
         assertTrue(last().contains("2.6"));
         bot.handle(text(1000, "private", "2,5"));
-        bot.handle(click("out:home"));
-        bot.handle(click("bk:betclic_fr"));
+        bot.handle(click(button("out", "home")));
+        bot.handle(click(button("bk", "betclic_fr")));
         assertTrue(last().contains("Confirmer"));
-        JsonNode confirm = click("ok");
+        assertFalse(last().contains("ATTENTION"));
+        JsonNode confirm = click(button("ok", null));
         bot.handle(confirm);
         bot.handle(confirm); // callback rejoué : ignoré
         assertTrue(last().contains("Pari enregistré"), last());
@@ -84,17 +94,86 @@ class TelegramTest extends PostgresTest {
         assertTrue(last().contains("Exposition ouverte : 25,00 EUR"), last());
     }
 
+    /** Conception (revue Codex) : un pari déjà placé au-delà des limites est enregistré et signalé. */
     @Test
-    void stakeAboveLimitIsRefusedAtConfirmation() {
+    void betAboveLimitsIsWarnedRecordedAndBlocksProposals() {
         long rec = recommendation();
         bot.handle(click("bet:" + rec));
         bot.handle(text(1000, "private", "500"));
         bot.handle(text(1000, "private", "2.6"));
-        bot.handle(click("out:home"));
-        bot.handle(click("bk:winamax_fr"));
-        bot.handle(click("ok"));
-        assertTrue(last().startsWith("Pari NON enregistré"), last());
+        bot.handle(click(button("out", "home")));
+        bot.handle(click(button("bk", "winamax_fr")));
+        assertTrue(last().contains("ATTENTION, ce pari dépasse tes limites"), last());
+        bot.handle(click(button("ok", null)));
+        assertTrue(last().startsWith("Pari enregistré"), last());
+        assertTrue(last().contains("DÉPASSEMENT ENREGISTRÉ"), last());
+        assertNotNull(db.queryForObject("SELECT limit_breach FROM manual_bet", String.class));
+        assertTrue(Boolean.TRUE.equals(risk.status().get("blocked")));
+        bot.handle(text(1000, "private", "/today"));
+        assertTrue(last().startsWith("BLOCAGE"), last());
+    }
+
+    /** Revue Codex n° 4 : un ancien bouton « Confirmer » ne valide jamais la saisie suivante. */
+    @Test
+    void staleButtonsFromAPreviousEntryAreRejected() {
+        long rec = recommendation();
+        bot.handle(click("bet:" + rec));
+        bot.handle(text(1000, "private", "20"));
+        bot.handle(text(1000, "private", "2.6"));
+        String staleOutcome = button("out", "home");
+        bot.handle(click(staleOutcome));
+        bot.handle(click(button("bk", "winamax_fr")));
+        String staleConfirm = button("ok", null);
+        // Nouvelle saisie démarrée avant d'avoir confirmé la première.
+        bot.handle(click("bet:" + rec));
+        bot.handle(text(1000, "private", "30"));
+        bot.handle(text(1000, "private", "2.6"));
+        String freshAway = button("out", "away");
+        bot.handle(click(staleOutcome));
+        assertTrue(last().startsWith("Bouton périmé"), last());
+        bot.handle(click(freshAway));
+        bot.handle(click(button("bk", "betclic_fr")));
+        String freshConfirm = button("ok", null);
+        bot.handle(click(staleConfirm));
+        assertTrue(last().startsWith("Bouton périmé"), last());
         assertEquals(0, db.queryForObject("SELECT count(*) FROM manual_bet", Integer.class));
+        bot.handle(click(freshConfirm));
+        var bet = db.queryForMap("SELECT stake, outcome, bookmaker FROM manual_bet");
+        assertEquals(0, new BigDecimal("30").compareTo((BigDecimal) bet.get("stake")));
+        assertEquals("away", bet.get("outcome"));
+        assertEquals("betclic_fr", bet.get("bookmaker"));
+    }
+
+    /** Revue Codex n° 2 : propositions en file puis pause → rien n'est envoyé, même après un échec. */
+    @Test
+    void queuedProposalsAreCancelledWhenPausedAtSendTime() {
+        pipeline.runOnce();
+        recording().failing = true;
+        assertEquals(0, outbox.dispatch());
+        recording().failing = false;
+        risk.pause("test");
+        db.update("UPDATE telegram_outbox SET available_at=now()");
+        assertEquals(0, outbox.dispatch());
+        assertTrue(recording().sent().isEmpty());
+        assertEquals(3, db.queryForObject(
+            "SELECT count(*) FROM telegram_outbox WHERE cancel_reason LIKE 'blocage%pause%'", Integer.class));
+        // Une fois annulé, un message ne repart pas, même après la reprise.
+        db.update("UPDATE risk_policy SET resume_not_before=now() - interval '1 second' WHERE id");
+        risk.resume("test");
+        assertEquals(0, outbox.dispatch());
+    }
+
+    @Test
+    void expiredSelectionsAndOrphanExpiryAlertsAreNotSent() {
+        pipeline.runOnce();
+        db.update("UPDATE opportunity SET expires_at=now() - interval '1 minute'");
+        pipeline.expire();
+        assertEquals(0, outbox.dispatch());
+        assertTrue(recording().sent().isEmpty());
+        assertEquals(3, db.queryForObject(
+            "SELECT count(*) FROM telegram_outbox WHERE cancel_reason LIKE 'sélection expirée%'", Integer.class));
+        assertEquals(3, db.queryForObject(
+            "SELECT count(*) FROM telegram_outbox WHERE cancel_reason='proposition initiale jamais livrée'", Integer.class));
     }
 
     @Test

@@ -28,7 +28,10 @@
 | Hasard, surapprentissage ? | Statut UNVALIDATED partout ; « échantillon trop faible » sous 30 matchs |
 | Produit fini ou démo ? | Démo/paper fonctionnelle et prête à configurer ; pas de validation réelle |
 
-## Reste à faire pour une vraie contre-revue
+## Contre-revue Codex du code de Claude (commit a8377db)
 
-Faire relire le diff de cette reprise par Codex (ou un autre relecteur), en priorité
-`RiskService`, `Pipeline.scan` et `TelegramBot.step`.
+Codex a relu le code écrit par Claude et confirmé cinq anomalies par des tests ciblés
+(plafond quotidien, envoi pendant une pause, quota bloqué, ancien bouton de confirmation,
+métriques mélangées) plus un point de conception (enregistrer tout pari déclaré). Toutes
+ont été corrigées avec des tests de non-régression : [REVUE_CODEX_A8377DB.md](REVUE_CODEX_A8377DB.md).
+Ces corrections n'ont pas encore été relues par Codex.
