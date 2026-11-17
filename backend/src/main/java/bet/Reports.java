@@ -35,10 +35,14 @@ public class Reports {
 
     private final JdbcTemplate db;
     private final RiskService risk;
+    private final TeamNews news;
+    private final com.fasterxml.jackson.databind.ObjectMapper json;
 
-    public Reports(JdbcTemplate db, RiskService risk) {
+    public Reports(JdbcTemplate db, RiskService risk, TeamNews news, com.fasterxml.jackson.databind.ObjectMapper json) {
         this.db = db;
         this.risk = risk;
+        this.news = news;
+        this.json = json;
     }
 
     Map<String, Object> details(long recommendation) {
@@ -120,6 +124,35 @@ public class Reports {
         text.append("\nStatut : ").append(row.get("status"))
             .append("\nSource des caractéristiques : classements ").append(demo(row) ? "synthétiques" : "fournisseur")
             .append(", indépendants des cotes. Modèle non validé empiriquement.");
+        text.append("\n\n").append(newsText(Rows.text(row, "event_id"), Rows.text(row, "home"), Rows.text(row, "away"),
+            demo(row)));
+        return text.toString();
+    }
+
+    /** Actualité affichée dans l'analyse : compositions et absents connus. */
+    String newsText(String eventId, String home, String away, boolean demo) {
+        if (demo) {
+            return "Actualité : non suivie pour un match DEMO.";
+        }
+        if (!news.configured()) {
+            return "Actualité : non suivie (API-Football non configurée) — vérifie blessés et compositions toi-même.";
+        }
+        var row = news.news(eventId);
+        if (row == null) {
+            return "Actualité : pas encore récupérée pour ce match.";
+        }
+        StringBuilder text = new StringBuilder("Composition officielle : ")
+            .append(Boolean.TRUE.equals(row.get("lineups_confirmed")) ? "publiée" : "pas encore publiée");
+        try {
+            var injuries = json.readTree(Rows.text(row, "injuries"));
+            for (String team : List.of(home, away)) {
+                var absent = TeamNews.lines(injuries, team);
+                text.append("\nAbsents ").append(team).append(" : ")
+                    .append(absent.isEmpty() ? "aucun signalé" : String.join(", ", absent));
+            }
+        } catch (Exception error) {
+            text.append("\nAbsents : illisibles.");
+        }
         return text.toString();
     }
 

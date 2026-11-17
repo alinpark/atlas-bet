@@ -49,13 +49,14 @@ abstract class PostgresTest {
                      paper_bet, recommendation, opportunity, prediction, feature_snapshot, odds_snapshot,
                      result_snapshot, event_participant, event, participant, competition, telegram_outbox,
                      telegram_delivery, telegram_callback, telegram_session, backtest_metric, backtest_run,
-                     provider_health, team_rating RESTART IDENTITY CASCADE
+                     provider_health, team_rating, team_news RESTART IDENTITY CASCADE
             """);
         db.update("""
             UPDATE risk_policy SET cap=2000, pending_cap=NULL, effective_at=NULL, max_stake=100, max_exposure=500,
                    max_daily_loss=250, paused_until=NULL, resume_not_before=NULL WHERE id
             """);
         db.update("DELETE FROM strategy WHERE revision > 1");
+        db.update("UPDATE model_version SET status='UNVALIDATED'");
         db.update("DELETE FROM app_setting WHERE key <> 'pipeline_lease'");
         db.update("UPDATE app_setting SET value='-infinity' WHERE key='pipeline_lease'");
         ((TelegramClient.Recording) telegram).clear();

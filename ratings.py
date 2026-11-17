@@ -29,6 +29,8 @@ ODDS_COLUMNS = {
     "max": (("MaxH", "MaxD", "MaxA"), ("BbMxH", "BbMxD", "BbMxA")),
     "close": (("AvgCH", "AvgCD", "AvgCA"),),  # moyenne à la clôture (depuis 2019/20)
     "pinnacle_close": (("PSCH", "PSCD", "PSCA"),),
+    "pinnacle": (("PSH", "PSD", "PSA"),),  # référence « sharp » avant match
+    "b365": (("B365H", "B365D", "B365A"),),  # un bookmaker grand public réel
 }
 
 

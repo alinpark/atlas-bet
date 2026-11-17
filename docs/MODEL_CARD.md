@@ -41,12 +41,41 @@ détectées sont surtout des matchs nuls et des outsiders surestimés. Rapport c
 [validation/football_ligue1.json](validation/football_ligue1.json). Pour le rejouer :
 `scripts\fetch-history.ps1`.
 
+## Autres stratégies testées le 17/11/2026 (`validation_markets.py`)
+
+Critères fixés avant l'exécution, période de décision 2022/23 → saison en cours, toutes
+ligues confondues : ≥ 300 paris, borne basse de l'IC 95 % du ROI > 0 et CLV moyen > 0
+(cote prise contre la cote de clôture Pinnacle, marge retirée). Rapport :
+[validation/markets.json](validation/markets.json).
+
+| Stratégie | Paris | ROI [IC 95 %] | CLV | Verdict |
+|---|---|---|---|---|
+| Piste 1 : cote moyenne du marché ≥ 3 % au-dessus du juste prix Pinnacle | 9 | — | −4,9 % | NON VALIDÉ |
+| Piste 1 : un bookmaker réel (Bet365) ≥ 3 % au-dessus de Pinnacle | 243 | +0,7 % [−22,9 ; +24,8] | **+2,1 %** | NON VALIDÉ (trop peu de paris) |
+| Piste 1 : meilleure cote du marché (borne optimiste, non décisionnelle) | 1 150 | −1,6 % [−12,5 ; +9,5] | +3,8 % | informatif |
+| Piste 2 : Elo + Poisson sur Ligue 2, Championship, 2. Bundesliga, Serie B, Liga 2 | 5 080 | −13,2 % [−17,6 ; −8,8] | −8,7 % | NON VALIDÉ |
+
+Lecture : prédire mieux que le marché avec un Elo échoue partout, y compris dans les ligues
+moins suivies. Comparer un bookmaker à Pinnacle produit un CLV positif (le signe classique
+d'une valeur réelle), mais trop rarement pour conclure, et les bookmakers français (marge
+plus élevée, absents de ces données) en offriraient encore moins. Prochaine mesure utile :
+suivre en paper, en réel, les cotes FR contre Pinnacle (région `eu` de The Odds API,
+2 crédits par appel).
+
 ## Suivi en conditions réelles (sans notification)
 
 Sur les vrais matchs de Ligue 1, le modèle produit des prédictions. Quand il voit un EV ≥ 5 %,
 un **pari virtuel** est enregistré (un par match), sans recommandation ni message. Résultats
 via football-data ; ROI et CLV visibles dans `/performance` et dans la synthèse du lundi.
 C'est la mesure qui dira si une future version mérite d'être revalidée.
+
+## Garde-fou actualité
+
+Une sélection réelle n'est proposée qu'une fois les **compositions officielles** des deux
+équipes publiées (API-Football, `TeamNews`). Les absents connus (blessés, suspendus)
+s'affichent dans `/analysis`. Sans clé API-Football, le garde-fou reste fermé. L'actualité
+n'entre pas dans les probabilités : aucune donnée historique de blessures ne permet de
+mesurer son apport.
 
 ## Incertitude
 

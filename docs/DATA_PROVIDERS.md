@@ -9,6 +9,18 @@
 | Résultats DEMO | `POST /api/v1/admin/demo/results` | Réservé aux matchs DEMO |
 | Classements football (Ligue 1) | Elo calculé sur les résultats football-data.co.uk 2015/16 → saison en cours | **Vérifié** : 18 équipes ; recalcul quotidien à 7 h |
 | Classements tennis / basketball | Aucune source réelle | Seule la source DEMO existe |
+| Blessés, suspendus, compositions | API-Football v3 (`/fixtures`, `/injuries`, `/fixtures/lineups`) | Implémenté et testé sur faux serveur ; **NOT_CONFIGURED** tant que `API_FOOTBALL_KEY` est vide |
+| Historiques 2es divisions (backtests) | football-data.co.uk (F2, E1, D2, I2, SP2), cotes Pinnacle incluses | Utilisé hors ligne par `validation_markets.py` |
+
+## API-Football
+
+- Clé gratuite sur dashboard.api-football.com, 100 requêtes/jour ; l'application s'arrête à
+  `API_FOOTBALL_DAILY_LIMIT` (90). Consommation : 1 requête par jour de match (calendrier),
+  1 par match et par 12 h (blessés), quelques-unes par match dans l'heure précédant le coup
+  d'envoi (compositions). Ligue 1 seulement (ligue 61).
+- Correspondance des équipes : mêmes alias que pour les classements (`RealRatings.key`).
+- Ajouter la clé dans le `.env` du VPS (`sudo nano /srv/atlas-bet/.env`), puis
+  `sudo docker compose --project-directory /srv/atlas-bet up -d`.
 
 ## football-data.co.uk
 

@@ -37,6 +37,21 @@ class RatingsTest(unittest.TestCase):
         self.assertAlmostEqual(sum(probabilities.values()), 1)
         self.assertGreater(probabilities["home"], probabilities["away"])
 
+    def test_line_shopping_bets_only_above_the_sharp_fair_price(self):
+        from validation_markets import line_bets, passes
+        base = {"league": "F2", "season": "2425", "hg": 1, "ag": 0,
+                "pinnacle": {"home": 2.0, "draw": 3.5, "away": 4.0},
+                "pinnacle_close": {"home": 1.9, "draw": 3.6, "away": 4.4}}
+        rich = dict(base, b365={"home": 2.25, "draw": 3.3, "away": 3.6})
+        poor = dict(base, b365={"home": 1.95, "draw": 3.3, "away": 3.6})
+        bets = line_bets([rich, poor], "b365")
+        self.assertEqual(len(bets), 1)
+        self.assertAlmostEqual(bets[0]["profit"], 1.25)
+        self.assertGreater(bets[0]["clv"], 0)
+        self.assertFalse(passes({"bets": 299, "roi_ci95": [0.01, 0.2], "mean_clv": 0.02}))
+        self.assertFalse(passes({"bets": 400, "roi_ci95": [0.01, 0.2], "mean_clv": -0.01}))
+        self.assertTrue(passes({"bets": 400, "roi_ci95": [0.01, 0.2], "mean_clv": 0.01}))
+
     def test_validation_helpers(self):
         self.assertAlmostEqual(sum(de_vig({"home": 2.0, "draw": 3.4, "away": 3.8}).values()), 1)
         low, high = bootstrap([1.0, -1.0] * 50)

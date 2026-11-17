@@ -48,6 +48,7 @@ public class Pipeline {
     private final RiskService risk;
     private final TelegramOutbox outbox;
     private final Reports reports;
+    private final TeamNews news;
     private final java.util.Set<String> oddsSources;
     @Value("${bet.pipeline.real-odds-max-age-minutes:135}")
     private int realOddsMaxAge = 135;
@@ -55,8 +56,9 @@ public class Pipeline {
     public Pipeline(JdbcTemplate db, ObjectMapper json, TransactionTemplate tx,
                     List<Providers.OddsProvider> oddsProviders, List<Providers.ResultsProvider> resultsProviders,
                     Providers.StatsProvider stats, Providers.ProbabilityEngine engine, RiskService risk,
-                    TelegramOutbox outbox, Reports reports,
+                    TelegramOutbox outbox, Reports reports, TeamNews news,
                     @Value("${bet.odds.provider:fixture}") String oddsProvider) {
+        this.news = news;
         this.db = db;
         this.json = json;
         this.tx = tx;
@@ -330,6 +332,11 @@ public class Pipeline {
     }
 
     private int recommend(String eventId, long opportunity, BigDecimal price, BigDecimal paperStake) {
+        // Garde-fou actualité : un match réel n'est proposé qu'après publication des compositions.
+        String source = db.queryForObject("SELECT source FROM event WHERE id=?", String.class, eventId);
+        if (!FixtureProviders.SOURCE.equals(source) && !news.lineupsConfirmed(eventId)) {
+            return 0;
+        }
         var ids = db.queryForList("""
             INSERT INTO recommendation(opportunity_id,event_id) VALUES (?,?)
             ON CONFLICT (event_id) DO NOTHING RETURNING id

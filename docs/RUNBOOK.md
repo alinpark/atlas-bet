@@ -44,7 +44,9 @@ API depuis le PC, par tunnel SSH :
 http://127.0.0.1:18082/api/v1 (mot de passe : `BET_ADMIN_PASSWORD` du `.env`).
 
 Sauvegarde sur le VPS : mêmes commandes que ci-dessous, préfixées par
-`sudo docker compose --project-directory /srv/atlas-bet`.
+`sudo docker compose --project-directory /srv/atlas-bet`. Les sauvegardes faites avant
+chaque déploiement sont dans `/srv/atlas-bet-backups` (root, 700) ; dernière : avant le
+passage V3 → V5 du 17/11/2026.
 
 ## Production locale (PC)
 

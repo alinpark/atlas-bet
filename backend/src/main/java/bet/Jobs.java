@@ -126,8 +126,11 @@ public final class Jobs {
         private final TelegramOutbox outbox;
         private final RealRatings ratings;
         private final Reports reports;
+        private final TeamNews news;
 
-        public Scheduler(Pipeline pipeline, TelegramBot bot, TelegramOutbox outbox, RealRatings ratings, Reports reports) {
+        public Scheduler(Pipeline pipeline, TelegramBot bot, TelegramOutbox outbox, RealRatings ratings, Reports reports,
+                         TeamNews news) {
+            this.news = news;
             this.pipeline = pipeline;
             this.bot = bot;
             this.outbox = outbox;
@@ -180,6 +183,16 @@ public final class Jobs {
             } catch (Exception error) {
                 LOG.warn("Long polling Telegram en échec : {}", error.getMessage());
                 sleep(30_000);
+            }
+        }
+
+        /** Actualité des équipes (blessés, compositions) toutes les 30 min, dans le budget API-Football. */
+        @Scheduled(initialDelay = 60_000, fixedDelay = 1_800_000)
+        void news() {
+            try {
+                news.refresh(java.time.Instant.now());
+            } catch (Exception error) {
+                LOG.warn("Actualité des équipes en échec : {}", error.getClass().getSimpleName());
             }
         }
 

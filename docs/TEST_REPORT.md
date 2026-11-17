@@ -4,10 +4,12 @@ Exécutés sur ce poste (Windows 11, Docker 29.9.3, JDK 21.0.13, Python 3.12.10)
 
 | Commande | Résultat |
 |---|---|
-| `scripts\run-tests.ps1` — `python -m unittest -v` | 13 tests, OK (dont Elo, lecture des CSV, validation) |
+| `scripts\run-tests.ps1` — `python -m unittest -v` | 14 tests, OK (dont Elo, lecture des CSV, validation, comparaison à Pinnacle) |
+| `validation_markets.py` — pistes 1 et 2 | Aucune stratégie validée ([MODEL_CARD](MODEL_CARD.md)) |
 | `scripts\fetch-history.ps1` — validation football Ligue 1 | 1 388 matchs de test, ROI −15,7 % → UNVALIDATED |
 | `scripts\run-tests.ps1` — tests du moteur FastAPI | 1 test, OK (3 sports, authentification, chronologie, /models/metrics) |
-| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 38 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1 à V4), dont 9 issus de la contre-revue Codex ([détail](REVUE_CODEX_A8377DB.md)) |
+| `scripts\run-tests.ps1` — `mvn -B -f backend/pom.xml test` | 43 tests, 0 échec (PostgreSQL 17 réel via Testcontainers, migrations Flyway V1 à V5), dont 9 issus de la contre-revue Codex ([détail](REVUE_CODEX_A8377DB.md)) et 5 pour le garde-fou actualité (`TeamNewsTest`) |
+| Déploiement VPS du 17/11/2026 (V3 → V5) | Sauvegarde préalable, migrations appliquées, données conservées, Atlas inchangé |
 | Déploiement : classements réels | 18 équipes de Ligue 1, 9 matchs prédits, 6 paris virtuels réels, 0 notification réelle |
 | Déploiement local avec vraie clé et vrai bot | Cotes Ligue 1 collectées (1 crédit), 3 notifications DEMO reçues sur Telegram |
 | `scripts\smoke.ps1 -SkipBuild` | 10 étapes du §8 réussies, code 0, sur le stack Docker complet (étapes 7–8 : pari hors limites enregistré et signalé, propositions bloquées) |

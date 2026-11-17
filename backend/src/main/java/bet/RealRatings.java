@@ -71,6 +71,11 @@ public class RealRatings implements Providers.StatsProvider {
         this.maxAgeDays = maxAgeDays;
     }
 
+    /** Clé de comparaison commune à toutes les sources (alias puis normalisation). */
+    static String key(String name) {
+        return normalize(ALIASES.getOrDefault(normalize(name), name));
+    }
+
     static String normalize(String name) {
         String plain = Normalizer.normalize(name, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         return plain.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").strip();
