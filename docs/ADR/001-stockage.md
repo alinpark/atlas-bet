@@ -1,6 +1,7 @@
-# ADR 001 — Migration progressive du stockage
+# ADR 001 — Stockage
 
-PostgreSQL est le stockage du nouveau backend. SQLite reste accessible pour
-éviter de casser le parcours de démo existant. Les deux bases ne sont pas
-synchronisées. La suppression du stockage historique dépend d'un parcours de
-collecte et de simulation PostgreSQL démontré par un test de bout en bout.
+Statut : remplacé par l'ADR 002.
+
+PostgreSQL était le stockage du nouveau backend et SQLite restait utilisé par le bot
+Python et la CLI, sans synchronisation. Cette coexistence permettait de dépasser le
+plafond (un pari saisi d'un côté était invisible de l'autre). Voir ADR 002.

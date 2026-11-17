@@ -1,9 +1,9 @@
-import tempfile
+import io
+import sqlite3
 import unittest
-from datetime import datetime, timezone
-from pathlib import Path
+from contextlib import redirect_stderr
+from unittest.mock import patch
 
-from ledger import Ledger
 from models import edge, evaluate
 from providers import demo
 
@@ -14,32 +14,12 @@ class DemoTest(unittest.TestCase):
         self.assertEqual(len(events), 3)
         for event in events:
             self.assertAlmostEqual(sum(event["probabilities"].values()), 1)
+            self.assertEqual(event["source"], "DEMO / SYNTHÉTIQUE")
         row = dict(events[0], settled="2099-01-01T00:00:00+00:00", winner="home", home_rating=1650, away_rating=1500)
         self.assertEqual(evaluate([row])["count"], 1)
         with self.assertRaises(ValueError):
             evaluate([dict(row, observed=row["start"])])
         self.assertEqual(edge("0.5", "2"), 0)
-
-    def test_risk_and_persistence(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "test.db"
-            now = datetime(2026, 11, 30, 22, tzinfo=timezone.utc)
-            ledger = Ledger(path, lambda: now, cap=20000)
-            ledger.record("a", "test", 18000)
-            ledger.record("a", "test", 18000)
-            with self.assertRaises(ValueError):
-                ledger.record("b", "test", 5000)
-            now = datetime(2026, 11, 30, 23, tzinfo=timezone.utc)
-            self.assertEqual(ledger.status()["exposure"], 18000)
-            ledger.settle("a", 0)
-            ledger.pause(True)
-            with self.assertRaises(ValueError):
-                ledger.record("b", "test", 1000)
-            ledger.record("paper", "DEMO", 1000, "paper")
-            ledger.settle("paper", 2000)
-            reopened = Ledger(path, lambda: now, cap=20000)
-            self.assertEqual(reopened.status()["loss"], 18000)
-            self.assertEqual(reopened.report("paper")["roi"], 1)
 
 
 class EvaluationChronologyTest(unittest.TestCase):
@@ -50,3 +30,25 @@ class EvaluationChronologyTest(unittest.TestCase):
         self.assertEqual(evaluate([row])["count"], 1)
         with self.assertRaises(ValueError):
             evaluate([dict(row, observed="2026-11-17T18:00:00-03:00")])
+
+
+class CliTest(unittest.TestCase):
+    def test_real_bet_commands_are_gone(self):
+        from atlas_bet import main
+
+        for command in ("record", "risk", "pause", "telegram-poll"):
+            with self.subTest(command=command), patch("sys.argv", ["atlas_bet", command]), \
+                 redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                main()
+
+    def test_cli_reports_sqlite_error_without_traceback(self):
+        from atlas_bet import main
+
+        errors = io.StringIO()
+        with patch("sys.argv", ["atlas_bet", "scan"]), \
+             patch("atlas_bet.scan", side_effect=sqlite3.OperationalError("database is locked")), \
+             redirect_stderr(errors), self.assertRaises(SystemExit) as exit_code:
+            main()
+        self.assertEqual(exit_code.exception.code, 2)
+        self.assertIn("database is locked", errors.getvalue())
+        self.assertNotIn("Traceback", errors.getvalue())

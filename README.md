@@ -1,72 +1,58 @@
-# Atlas Bet — prototype local
+# Atlas Bet — conseiller de paris sportifs (V1, mode DEMO/PAPER)
 
-Exécuter avec Python 3.12 et les données de fuseau IANA disponibles. Sous Windows,
-le runtime voisin testé est `..\ATLAS-TRADING\.tools\python\python.exe`.
+Surveille cotes et matchs (football, tennis, basketball), estime des probabilités à
+partir de données **indépendantes des cotes**, signale les écarts sur Telegram, suit
+les paris que **vous placez vous-même** et applique un plafond de pertes mensuelles.
 
-```text
-python -m unittest -v
-python -m atlas_bet demo
-python -m atlas_bet record ref1 "Pari déjà effectué" 10000
-python -m atlas_bet settle ref1 0
-python -m atlas_bet risk
-python -m atlas_bet report manual
-python -m atlas_bet pause
-python -m atlas_bet resume
-```
+**Aucun pari n'est jamais placé automatiquement.** Les modèles sont `UNVALIDATED` :
+tant qu'aucune validation empirique n'existe, seules les données DEMO / SYNTHÉTIQUES
+produisent des sélections. Une estimation peut se tromper ; aucun gain n'est promis.
 
-Les montants sont en centimes. `--db` sélectionne un fichier SQLite indépendant.
-`record --kind paper` et `report paper` séparent la simulation du registre manuel.
-Le plafond interne bloque l'ajout dans le registre, sans pouvoir agir sur le bookmaker.
-Les gains ne compensent pas les pertes mensuelles dans ce contrôle et les mises
-ouvertes restent réservées au changement de mois en Europe/Paris.
+## Démarrer la démo (aucune clé requise)
 
-La commande `odds <competition>` lit les cotes h2h brutes si THE_ODDS_API_KEY
-et SPORTS_ODDS_COMPETITIONS (clés séparées par virgule) sont configurés.
-Source : [The Odds API V4](https://the-odds-api.com/liveapi/guides/v4/).
-`evaluate <fichier JSON>` attend des lignes avec sport, observed, start, settled,
-home_rating, away_rating et winner. Les dates doivent être normalisées en UTC.
-Les probabilités de démonstration sont synthétiques et non validées.
-
-Le runtime embarqué d'Atlas isole les imports. Pour l'utiliser, remplacer python -m atlas_bet par la commande suivante suivie des mêmes arguments :
-
-    ..\ATLAS-TRADING\.tools\python\python.exe -c "import sys; sys.path.insert(0,'.'); from atlas_bet import main; main()"
-
-## Parcours démo sous Docker
+Prérequis : Docker, JDK 21 + Maven et Python 3.12 (sur ce poste, les outils voisins
+`..\ATLAS-TRADING\.tools` sont détectés automatiquement).
 
 ```text
-docker compose run --build --rm cli ingest-demo
-docker compose run --rm cli simulate DEMO-soccer 100
-docker compose run --rm cli settle-demo DEMO-soccer void
-docker compose run --rm cli simulation-report
+scripts\start-demo.ps1      # construit et démarre PostgreSQL, moteur FastAPI, backend
+scripts\smoke.ps1           # scénario complet en 10 étapes, code de sortie non nul en cas d'échec
+scripts\run-tests.ps1       # tests Python, moteur et backend (Testcontainers)
+scripts\doctor.ps1          # diagnostic
 ```
 
-`odds <competition> --persist` enregistre les marchés h2h FR complets et frais.
-`backtest <fichier JSON>` exige des dates avec fuseau et un champ event unique
-par ligne. Il compare le modèle fixe à une baseline uniforme. Ce rapport
-n'effectue ni réentraînement walk-forward ni validation sur données réelles.
-`telegram-poll` traite un lot d'updates avec TELEGRAM_BOT_TOKEN et
-TELEGRAM_ALLOWED_CHAT_IDS. Les commandes disponibles sont /risk, /report,
-/pause et /resume. Le test utilise un transport simulé.
+API : http://127.0.0.1:18082/api/v1 — OpenAPI : `/v3/api-docs` (compte de démo
+`admin` / `demo-admin-local`). En démo, Telegram passe par un émulateur
+(`POST /admin/telegram/simulate`, `GET /admin/telegram/sent`).
 
+## Passer en réel
 
-La collecte et Telegram ont des profils indépendants. Après configuration des
-variables, les commandes de démarrage sont :
+Copier `.env.example` en `.env`, renseigner les secrets, puis `scripts\prepare-build.ps1`
+et `docker compose up -d --build --wait`. Détails : [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
-```text
-docker compose --profile collect up --build -d collector
-docker compose --profile telegram up --build -d telegram
-docker compose stop collector telegram
-```
+- **Telegram** : `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ALLOWED_CHAT_IDS` (chats privés autorisés).
+  Commandes : /today, /sports, /analysis, /performance, /budget, /history, /paper,
+  /pause, /resume, /help. Boutons : Voir analyse, J'ai parié (saisie guidée mise → cote
+  → issue → bookmaker → confirmation), Ignorer, Mettre en pause.
+- **Cotes réelles** : `ODDS_PROVIDER=theoddsapi`, `THE_ODDS_API_KEY`, `SPORTS_ODDS_COMPETITIONS`.
+- **Paris faits hors bot** : `POST /api/v1/manual-bets` avec `source: HORS_BOT`.
 
-Le projet Compose ne publie aucun port et utilise un volume propre. Le parcours
-DEMO est exécutable sans compte externe. Les cotes réelles et le bot n'ont pas
-été vérifiés avec des identifiants réels. Les alertes de paris réels restent
-inactives faute de modèles validés. La V1 complète du cahier des charges exige
-encore les contrats d'API, la validation empirique, les résultats fournisseurs
-et la validation du déploiement.
+## Règles de risque
 
-Pour modifier explicitement le plafond réel (en centimes), utiliser par exemple
-`python -m atlas_bet --cap 50000 risk`. Le plafond est partagé par les commandes
-et les workers qui ouvrent le même fichier SQLite. Une baisse s'applique
-immédiatement. Une hausse prend effet le premier jour du mois suivant à minuit
-(heure de Paris).
+Plafond de 2 000 EUR de pertes par mois civil (Paris), mise unitaire ≤ 100 EUR,
+exposition ≤ 500 EUR, perte quotidienne ≤ 250 EUR, pause d'au moins 24 h. Les gains ne
+rechargent pas le budget. Le plafond ne voit que les paris déclarés. Configurez aussi
+vos limites ANJ sur 7 jours chez chaque opérateur. Voir [docs/RISK_POLICY.md](docs/RISK_POLICY.md).
+
+## Documentation
+
+[Architecture](docs/ARCHITECTURE.md) · [Modèles](docs/MODEL_CARD.md) ·
+[Fournisseurs](docs/DATA_PROVIDERS.md) · [Exploitation](docs/RUNBOOK.md) ·
+[Tests](docs/TEST_REPORT.md) · [Livraison](docs/RELEASE_REPORT.md) ·
+[Revue](docs/CLAUDE_CHALLENGE.md) · [Audit Atlas](docs/ATLAS_INFRA_AUDIT.md)
+
+## Outils hors ligne (CLI Python)
+
+`python -m atlas_bet demo | ingest-demo | scan | simulate | settle-demo | simulation-report`
+(simulation DEMO en SQLite) et `evaluate | backtest <fichier.json>` (métriques sur un
+historique horodaté, ex. `fixtures/sports/backtest_demo.json`). La CLI ne gère aucun
+pari réel.

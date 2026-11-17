@@ -1,10 +1,8 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
-COPY pom.xml .
-COPY src ./src
-RUN mvn -B verify
+# Le jar est construit sur l'hôte (scripts/prepare-build) : tests Testcontainers inclus,
+# et dépendances Maven résolues avec le magasin de certificats du système.
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /build/target/atlas-bet-0.1.0.jar app.jar
+COPY target/atlas-bet-0.1.0.jar app.jar
 USER 10001:10001
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-jar", "/app/app.jar"]

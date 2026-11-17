@@ -1,3 +1,2 @@
-target/
-.env
-.env.*
+**
+!target/atlas-bet-0.1.0.jar

@@ -60,6 +60,12 @@ def active():
     return {"versions": MODELS, "modelStatus": "UNVALIDATED", "calibrationVersion": None}
 
 
+@app.get("/models/metrics", dependencies=[Depends(authorize)])
+def metrics():
+    return {"versions": MODELS, "modelStatus": "UNVALIDATED", "calibrationVersion": None, "metrics": None,
+            "reason": "Aucune validation empirique sur données réelles ; métriques disponibles via POST /backtest."}
+
+
 @app.post("/predict/{sport}", dependencies=[Depends(authorize)])
 def forecast(sport: Sport, request: PredictRequest):
     if request.featureTimestamp >= request.startsAt:

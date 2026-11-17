@@ -1,53 +1,10 @@
+# Surcouche DEMO : force les données synthétiques et l'émulateur Telegram, même si
+# des clés réelles traînent dans l'environnement. À utiliser avec --env-file demo.env.
 services:
-  postgres:
-    image: postgres:17-alpine
-    init: true
-    environment:
-      POSTGRES_DB: atlas_bet
-      POSTGRES_USER: atlas_bet
-      POSTGRES_PASSWORD: demo-db-local
-    volumes:
-      - demo-db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "atlas_bet", "-d", "atlas_bet"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-    logging: &rotated
-      driver: json-file
-      options: {max-size: "10m", max-file: "3"}
-  ai-engine:
-    build:
-      context: .
-      dockerfile: ai-engine/Dockerfile
-    init: true
-    environment:
-      BET_ENGINE_TOKEN: demo-engine-local
-    healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health', timeout=2)"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-    logging: *rotated
   backend:
-    build: ./backend
-    init: true
     environment:
-      BET_JDBC_URL: jdbc:postgresql://postgres:5432/atlas_bet
-      BET_DB_PASSWORD: demo-db-local
-      BET_ADMIN_PASSWORD: demo-admin-local
-    depends_on:
-      postgres:
-        condition: service_healthy
-      ai-engine:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:18082:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    logging: *rotated
-volumes:
-  demo-db:
+      ODDS_PROVIDER: fixture
+      THE_ODDS_API_KEY: ""
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_SIMULATOR: "true"
+      TELEGRAM_ALLOWED_CHAT_IDS: "1000"

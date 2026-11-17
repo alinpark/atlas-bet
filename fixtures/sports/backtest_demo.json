@@ -1,0 +1,1382 @@
+[
+ {
+  "event": "DEMO-BT-000",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-05T15:00:00+00:00",
+  "start": "2026-01-05T18:00:00+00:00",
+  "settled": "2026-01-05T20:30:00+00:00",
+  "home_rating": 1424,
+  "away_rating": 1362,
+  "winner": "draw",
+  "odds": {
+   "home": "1.77",
+   "away": "3.76",
+   "draw": "3.65"
+  }
+ },
+ {
+  "event": "DEMO-BT-001",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-05T16:00:00+00:00",
+  "start": "2026-01-05T19:00:00+00:00",
+  "settled": "2026-01-05T21:30:00+00:00",
+  "home_rating": 1588,
+  "away_rating": 1381,
+  "winner": "home",
+  "odds": {
+   "home": "1.28",
+   "away": "3.92"
+  }
+ },
+ {
+  "event": "DEMO-BT-002",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-05T17:00:00+00:00",
+  "start": "2026-01-05T20:00:00+00:00",
+  "settled": "2026-01-05T22:30:00+00:00",
+  "home_rating": 1596,
+  "away_rating": 1711,
+  "winner": "home",
+  "odds": {
+   "home": "2.10",
+   "away": "1.69"
+  }
+ },
+ {
+  "event": "DEMO-BT-003",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-06T15:00:00+00:00",
+  "start": "2026-01-06T18:00:00+00:00",
+  "settled": "2026-01-06T20:30:00+00:00",
+  "home_rating": 1438,
+  "away_rating": 1415,
+  "winner": "home",
+  "odds": {
+   "home": "2.08",
+   "away": "3.41",
+   "draw": "4.00"
+  }
+ },
+ {
+  "event": "DEMO-BT-004",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-06T16:00:00+00:00",
+  "start": "2026-01-06T19:00:00+00:00",
+  "settled": "2026-01-06T21:30:00+00:00",
+  "home_rating": 1627,
+  "away_rating": 1419,
+  "winner": "home",
+  "odds": {
+   "home": "1.31",
+   "away": "4.11"
+  }
+ },
+ {
+  "event": "DEMO-BT-005",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-06T17:00:00+00:00",
+  "start": "2026-01-06T20:00:00+00:00",
+  "settled": "2026-01-06T22:30:00+00:00",
+  "home_rating": 1648,
+  "away_rating": 1667,
+  "winner": "away",
+  "odds": {
+   "home": "1.65",
+   "away": "2.30"
+  }
+ },
+ {
+  "event": "DEMO-BT-006",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-07T15:00:00+00:00",
+  "start": "2026-01-07T18:00:00+00:00",
+  "settled": "2026-01-07T20:30:00+00:00",
+  "home_rating": 1414,
+  "away_rating": 1386,
+  "winner": "away",
+  "odds": {
+   "home": "1.87",
+   "away": "3.22",
+   "draw": "3.54"
+  }
+ },
+ {
+  "event": "DEMO-BT-007",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-07T16:00:00+00:00",
+  "start": "2026-01-07T19:00:00+00:00",
+  "settled": "2026-01-07T21:30:00+00:00",
+  "home_rating": 1411,
+  "away_rating": 1638,
+  "winner": "away",
+  "odds": {
+   "home": "4.61",
+   "away": "1.24"
+  }
+ },
+ {
+  "event": "DEMO-BT-008",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-07T17:00:00+00:00",
+  "start": "2026-01-07T20:00:00+00:00",
+  "settled": "2026-01-07T22:30:00+00:00",
+  "home_rating": 1504,
+  "away_rating": 1518,
+  "winner": "home",
+  "odds": {
+   "home": "1.61",
+   "away": "2.45"
+  }
+ },
+ {
+  "event": "DEMO-BT-009",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-08T15:00:00+00:00",
+  "start": "2026-01-08T18:00:00+00:00",
+  "settled": "2026-01-08T20:30:00+00:00",
+  "home_rating": 1435,
+  "away_rating": 1529,
+  "winner": "away",
+  "odds": {
+   "home": "2.62",
+   "away": "2.34",
+   "draw": "3.42"
+  }
+ },
+ {
+  "event": "DEMO-BT-010",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-08T16:00:00+00:00",
+  "start": "2026-01-08T19:00:00+00:00",
+  "settled": "2026-01-08T21:30:00+00:00",
+  "home_rating": 1435,
+  "away_rating": 1551,
+  "winner": "away",
+  "odds": {
+   "home": "2.79",
+   "away": "1.38"
+  }
+ },
+ {
+  "event": "DEMO-BT-011",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-08T17:00:00+00:00",
+  "start": "2026-01-08T20:00:00+00:00",
+  "settled": "2026-01-08T22:30:00+00:00",
+  "home_rating": 1454,
+  "away_rating": 1525,
+  "winner": "away",
+  "odds": {
+   "home": "1.86",
+   "away": "2.08"
+  }
+ },
+ {
+  "event": "DEMO-BT-012",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-09T15:00:00+00:00",
+  "start": "2026-01-09T18:00:00+00:00",
+  "settled": "2026-01-09T20:30:00+00:00",
+  "home_rating": 1546,
+  "away_rating": 1539,
+  "winner": "home",
+  "odds": {
+   "home": "2.08",
+   "away": "3.27",
+   "draw": "3.65"
+  }
+ },
+ {
+  "event": "DEMO-BT-013",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-09T16:00:00+00:00",
+  "start": "2026-01-09T19:00:00+00:00",
+  "settled": "2026-01-09T21:30:00+00:00",
+  "home_rating": 1729,
+  "away_rating": 1351,
+  "winner": "home",
+  "odds": {
+   "home": "1.01",
+   "away": "9.56"
+  }
+ },
+ {
+  "event": "DEMO-BT-014",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-09T17:00:00+00:00",
+  "start": "2026-01-09T20:00:00+00:00",
+  "settled": "2026-01-09T22:30:00+00:00",
+  "home_rating": 1441,
+  "away_rating": 1638,
+  "winner": "away",
+  "odds": {
+   "home": "2.88",
+   "away": "1.35"
+  }
+ },
+ {
+  "event": "DEMO-BT-015",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-10T15:00:00+00:00",
+  "start": "2026-01-10T18:00:00+00:00",
+  "settled": "2026-01-10T20:30:00+00:00",
+  "home_rating": 1649,
+  "away_rating": 1412,
+  "winner": "home",
+  "odds": {
+   "home": "1.45",
+   "away": "7.48",
+   "draw": "4.41"
+  }
+ },
+ {
+  "event": "DEMO-BT-016",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-10T16:00:00+00:00",
+  "start": "2026-01-10T19:00:00+00:00",
+  "settled": "2026-01-10T21:30:00+00:00",
+  "home_rating": 1747,
+  "away_rating": 1732,
+  "winner": "away",
+  "odds": {
+   "home": "1.72",
+   "away": "1.97"
+  }
+ },
+ {
+  "event": "DEMO-BT-017",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-10T17:00:00+00:00",
+  "start": "2026-01-10T20:00:00+00:00",
+  "settled": "2026-01-10T22:30:00+00:00",
+  "home_rating": 1495,
+  "away_rating": 1612,
+  "winner": "home",
+  "odds": {
+   "home": "2.08",
+   "away": "1.81"
+  }
+ },
+ {
+  "event": "DEMO-BT-018",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-11T15:00:00+00:00",
+  "start": "2026-01-11T18:00:00+00:00",
+  "settled": "2026-01-11T20:30:00+00:00",
+  "home_rating": 1705,
+  "away_rating": 1665,
+  "winner": "draw",
+  "odds": {
+   "home": "1.95",
+   "away": "3.73",
+   "draw": "3.82"
+  }
+ },
+ {
+  "event": "DEMO-BT-019",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-11T16:00:00+00:00",
+  "start": "2026-01-11T19:00:00+00:00",
+  "settled": "2026-01-11T21:30:00+00:00",
+  "home_rating": 1601,
+  "away_rating": 1394,
+  "winner": "home",
+  "odds": {
+   "home": "1.17",
+   "away": "4.24"
+  }
+ },
+ {
+  "event": "DEMO-BT-020",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-11T17:00:00+00:00",
+  "start": "2026-01-11T20:00:00+00:00",
+  "settled": "2026-01-11T22:30:00+00:00",
+  "home_rating": 1388,
+  "away_rating": 1674,
+  "winner": "away",
+  "odds": {
+   "home": "4.26",
+   "away": "1.22"
+  }
+ },
+ {
+  "event": "DEMO-BT-021",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-12T15:00:00+00:00",
+  "start": "2026-01-12T18:00:00+00:00",
+  "settled": "2026-01-12T20:30:00+00:00",
+  "home_rating": 1627,
+  "away_rating": 1492,
+  "winner": "draw",
+  "odds": {
+   "home": "1.49",
+   "away": "4.96",
+   "draw": "4.03"
+  }
+ },
+ {
+  "event": "DEMO-BT-022",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-12T16:00:00+00:00",
+  "start": "2026-01-12T19:00:00+00:00",
+  "settled": "2026-01-12T21:30:00+00:00",
+  "home_rating": 1690,
+  "away_rating": 1687,
+  "winner": "away",
+  "odds": {
+   "home": "2.01",
+   "away": "1.97"
+  }
+ },
+ {
+  "event": "DEMO-BT-023",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-12T17:00:00+00:00",
+  "start": "2026-01-12T20:00:00+00:00",
+  "settled": "2026-01-12T22:30:00+00:00",
+  "home_rating": 1422,
+  "away_rating": 1355,
+  "winner": "home",
+  "odds": {
+   "home": "1.27",
+   "away": "3.32"
+  }
+ },
+ {
+  "event": "DEMO-BT-024",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-13T15:00:00+00:00",
+  "start": "2026-01-13T18:00:00+00:00",
+  "settled": "2026-01-13T20:30:00+00:00",
+  "home_rating": 1587,
+  "away_rating": 1520,
+  "winner": "draw",
+  "odds": {
+   "home": "1.92",
+   "away": "3.88",
+   "draw": "3.68"
+  }
+ },
+ {
+  "event": "DEMO-BT-025",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-13T16:00:00+00:00",
+  "start": "2026-01-13T19:00:00+00:00",
+  "settled": "2026-01-13T21:30:00+00:00",
+  "home_rating": 1560,
+  "away_rating": 1542,
+  "winner": "away",
+  "odds": {
+   "home": "1.85",
+   "away": "1.95"
+  }
+ },
+ {
+  "event": "DEMO-BT-026",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-13T17:00:00+00:00",
+  "start": "2026-01-13T20:00:00+00:00",
+  "settled": "2026-01-13T22:30:00+00:00",
+  "home_rating": 1598,
+  "away_rating": 1567,
+  "winner": "home",
+  "odds": {
+   "home": "1.48",
+   "away": "2.60"
+  }
+ },
+ {
+  "event": "DEMO-BT-027",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-14T15:00:00+00:00",
+  "start": "2026-01-14T18:00:00+00:00",
+  "settled": "2026-01-14T20:30:00+00:00",
+  "home_rating": 1637,
+  "away_rating": 1614,
+  "winner": "home",
+  "odds": {
+   "home": "1.88",
+   "away": "3.45",
+   "draw": "3.54"
+  }
+ },
+ {
+  "event": "DEMO-BT-028",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-14T16:00:00+00:00",
+  "start": "2026-01-14T19:00:00+00:00",
+  "settled": "2026-01-14T21:30:00+00:00",
+  "home_rating": 1437,
+  "away_rating": 1686,
+  "winner": "away",
+  "odds": {
+   "home": "4.90",
+   "away": "1.14"
+  }
+ },
+ {
+  "event": "DEMO-BT-029",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-14T17:00:00+00:00",
+  "start": "2026-01-14T20:00:00+00:00",
+  "settled": "2026-01-14T22:30:00+00:00",
+  "home_rating": 1365,
+  "away_rating": 1361,
+  "winner": "home",
+  "odds": {
+   "home": "1.57",
+   "away": "2.44"
+  }
+ },
+ {
+  "event": "DEMO-BT-030",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-15T15:00:00+00:00",
+  "start": "2026-01-15T18:00:00+00:00",
+  "settled": "2026-01-15T20:30:00+00:00",
+  "home_rating": 1608,
+  "away_rating": 1704,
+  "winner": "away",
+  "odds": {
+   "home": "2.61",
+   "away": "2.21",
+   "draw": "3.64"
+  }
+ },
+ {
+  "event": "DEMO-BT-031",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-15T16:00:00+00:00",
+  "start": "2026-01-15T19:00:00+00:00",
+  "settled": "2026-01-15T21:30:00+00:00",
+  "home_rating": 1618,
+  "away_rating": 1430,
+  "winner": "home",
+  "odds": {
+   "home": "1.21",
+   "away": "3.46"
+  }
+ },
+ {
+  "event": "DEMO-BT-032",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-15T17:00:00+00:00",
+  "start": "2026-01-15T20:00:00+00:00",
+  "settled": "2026-01-15T22:30:00+00:00",
+  "home_rating": 1536,
+  "away_rating": 1410,
+  "winner": "away",
+  "odds": {
+   "home": "1.31",
+   "away": "4.22"
+  }
+ },
+ {
+  "event": "DEMO-BT-033",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-16T15:00:00+00:00",
+  "start": "2026-01-16T18:00:00+00:00",
+  "settled": "2026-01-16T20:30:00+00:00",
+  "home_rating": 1494,
+  "away_rating": 1488,
+  "winner": "away",
+  "odds": {
+   "home": "2.01",
+   "away": "3.32",
+   "draw": "3.74"
+  }
+ },
+ {
+  "event": "DEMO-BT-034",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-16T16:00:00+00:00",
+  "start": "2026-01-16T19:00:00+00:00",
+  "settled": "2026-01-16T21:30:00+00:00",
+  "home_rating": 1613,
+  "away_rating": 1461,
+  "winner": "home",
+  "odds": {
+   "home": "1.34",
+   "away": "3.38"
+  }
+ },
+ {
+  "event": "DEMO-BT-035",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-16T17:00:00+00:00",
+  "start": "2026-01-16T20:00:00+00:00",
+  "settled": "2026-01-16T22:30:00+00:00",
+  "home_rating": 1553,
+  "away_rating": 1379,
+  "winner": "home",
+  "odds": {
+   "home": "1.09",
+   "away": "5.33"
+  }
+ },
+ {
+  "event": "DEMO-BT-036",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-17T15:00:00+00:00",
+  "start": "2026-01-17T18:00:00+00:00",
+  "settled": "2026-01-17T20:30:00+00:00",
+  "home_rating": 1403,
+  "away_rating": 1568,
+  "winner": "away",
+  "odds": {
+   "home": "3.70",
+   "away": "1.94",
+   "draw": "3.57"
+  }
+ },
+ {
+  "event": "DEMO-BT-037",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-17T16:00:00+00:00",
+  "start": "2026-01-17T19:00:00+00:00",
+  "settled": "2026-01-17T21:30:00+00:00",
+  "home_rating": 1486,
+  "away_rating": 1503,
+  "winner": "away",
+  "odds": {
+   "home": "1.93",
+   "away": "1.76"
+  }
+ },
+ {
+  "event": "DEMO-BT-038",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-17T17:00:00+00:00",
+  "start": "2026-01-17T20:00:00+00:00",
+  "settled": "2026-01-17T22:30:00+00:00",
+  "home_rating": 1480,
+  "away_rating": 1657,
+  "winner": "home",
+  "odds": {
+   "home": "2.57",
+   "away": "1.54"
+  }
+ },
+ {
+  "event": "DEMO-BT-039",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-18T15:00:00+00:00",
+  "start": "2026-01-18T18:00:00+00:00",
+  "settled": "2026-01-18T20:30:00+00:00",
+  "home_rating": 1745,
+  "away_rating": 1508,
+  "winner": "draw",
+  "odds": {
+   "home": "1.35",
+   "away": "8.41",
+   "draw": "4.57"
+  }
+ },
+ {
+  "event": "DEMO-BT-040",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-18T16:00:00+00:00",
+  "start": "2026-01-18T19:00:00+00:00",
+  "settled": "2026-01-18T21:30:00+00:00",
+  "home_rating": 1580,
+  "away_rating": 1680,
+  "winner": "home",
+  "odds": {
+   "home": "2.75",
+   "away": "1.44"
+  }
+ },
+ {
+  "event": "DEMO-BT-041",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-18T17:00:00+00:00",
+  "start": "2026-01-18T20:00:00+00:00",
+  "settled": "2026-01-18T22:30:00+00:00",
+  "home_rating": 1745,
+  "away_rating": 1511,
+  "winner": "home",
+  "odds": {
+   "home": "1.10",
+   "away": "6.35"
+  }
+ },
+ {
+  "event": "DEMO-BT-042",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-19T15:00:00+00:00",
+  "start": "2026-01-19T18:00:00+00:00",
+  "settled": "2026-01-19T20:30:00+00:00",
+  "home_rating": 1713,
+  "away_rating": 1651,
+  "winner": "home",
+  "odds": {
+   "home": "2.00",
+   "away": "4.08",
+   "draw": "3.81"
+  }
+ },
+ {
+  "event": "DEMO-BT-043",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-19T16:00:00+00:00",
+  "start": "2026-01-19T19:00:00+00:00",
+  "settled": "2026-01-19T21:30:00+00:00",
+  "home_rating": 1723,
+  "away_rating": 1461,
+  "winner": "home",
+  "odds": {
+   "home": "1.08",
+   "away": "5.37"
+  }
+ },
+ {
+  "event": "DEMO-BT-044",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-19T17:00:00+00:00",
+  "start": "2026-01-19T20:00:00+00:00",
+  "settled": "2026-01-19T22:30:00+00:00",
+  "home_rating": 1740,
+  "away_rating": 1570,
+  "winner": "away",
+  "odds": {
+   "home": "1.17",
+   "away": "5.25"
+  }
+ },
+ {
+  "event": "DEMO-BT-045",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-20T15:00:00+00:00",
+  "start": "2026-01-20T18:00:00+00:00",
+  "settled": "2026-01-20T20:30:00+00:00",
+  "home_rating": 1421,
+  "away_rating": 1620,
+  "winner": "draw",
+  "odds": {
+   "home": "3.64",
+   "away": "1.97",
+   "draw": "3.78"
+  }
+ },
+ {
+  "event": "DEMO-BT-046",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-20T16:00:00+00:00",
+  "start": "2026-01-20T19:00:00+00:00",
+  "settled": "2026-01-20T21:30:00+00:00",
+  "home_rating": 1747,
+  "away_rating": 1537,
+  "winner": "home",
+  "odds": {
+   "home": "1.23",
+   "away": "3.99"
+  }
+ },
+ {
+  "event": "DEMO-BT-047",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-20T17:00:00+00:00",
+  "start": "2026-01-20T20:00:00+00:00",
+  "settled": "2026-01-20T22:30:00+00:00",
+  "home_rating": 1603,
+  "away_rating": 1723,
+  "winner": "away",
+  "odds": {
+   "home": "2.26",
+   "away": "1.82"
+  }
+ },
+ {
+  "event": "DEMO-BT-048",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-21T15:00:00+00:00",
+  "start": "2026-01-21T18:00:00+00:00",
+  "settled": "2026-01-21T20:30:00+00:00",
+  "home_rating": 1621,
+  "away_rating": 1410,
+  "winner": "draw",
+  "odds": {
+   "home": "1.32",
+   "away": "7.40",
+   "draw": "4.56"
+  }
+ },
+ {
+  "event": "DEMO-BT-049",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-21T16:00:00+00:00",
+  "start": "2026-01-21T19:00:00+00:00",
+  "settled": "2026-01-21T21:30:00+00:00",
+  "home_rating": 1480,
+  "away_rating": 1420,
+  "winner": "away",
+  "odds": {
+   "home": "1.52",
+   "away": "2.39"
+  }
+ },
+ {
+  "event": "DEMO-BT-050",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-21T17:00:00+00:00",
+  "start": "2026-01-21T20:00:00+00:00",
+  "settled": "2026-01-21T22:30:00+00:00",
+  "home_rating": 1365,
+  "away_rating": 1489,
+  "winner": "home",
+  "odds": {
+   "home": "2.26",
+   "away": "1.60"
+  }
+ },
+ {
+  "event": "DEMO-BT-051",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-22T15:00:00+00:00",
+  "start": "2026-01-22T18:00:00+00:00",
+  "settled": "2026-01-22T20:30:00+00:00",
+  "home_rating": 1580,
+  "away_rating": 1450,
+  "winner": "home",
+  "odds": {
+   "home": "1.61",
+   "away": "4.69",
+   "draw": "4.32"
+  }
+ },
+ {
+  "event": "DEMO-BT-052",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-22T16:00:00+00:00",
+  "start": "2026-01-22T19:00:00+00:00",
+  "settled": "2026-01-22T21:30:00+00:00",
+  "home_rating": 1490,
+  "away_rating": 1428,
+  "winner": "home",
+  "odds": {
+   "home": "1.50",
+   "away": "2.27"
+  }
+ },
+ {
+  "event": "DEMO-BT-053",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-22T17:00:00+00:00",
+  "start": "2026-01-22T20:00:00+00:00",
+  "settled": "2026-01-22T22:30:00+00:00",
+  "home_rating": 1351,
+  "away_rating": 1436,
+  "winner": "away",
+  "odds": {
+   "home": "2.04",
+   "away": "1.86"
+  }
+ },
+ {
+  "event": "DEMO-BT-054",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-23T15:00:00+00:00",
+  "start": "2026-01-23T18:00:00+00:00",
+  "settled": "2026-01-23T20:30:00+00:00",
+  "home_rating": 1568,
+  "away_rating": 1374,
+  "winner": "away",
+  "odds": {
+   "home": "1.41",
+   "away": "6.78",
+   "draw": "4.15"
+  }
+ },
+ {
+  "event": "DEMO-BT-055",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-23T16:00:00+00:00",
+  "start": "2026-01-23T19:00:00+00:00",
+  "settled": "2026-01-23T21:30:00+00:00",
+  "home_rating": 1480,
+  "away_rating": 1653,
+  "winner": "home",
+  "odds": {
+   "home": "3.57",
+   "away": "1.32"
+  }
+ },
+ {
+  "event": "DEMO-BT-056",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-23T17:00:00+00:00",
+  "start": "2026-01-23T20:00:00+00:00",
+  "settled": "2026-01-23T22:30:00+00:00",
+  "home_rating": 1718,
+  "away_rating": 1687,
+  "winner": "away",
+  "odds": {
+   "home": "1.38",
+   "away": "2.93"
+  }
+ },
+ {
+  "event": "DEMO-BT-057",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-24T15:00:00+00:00",
+  "start": "2026-01-24T18:00:00+00:00",
+  "settled": "2026-01-24T20:30:00+00:00",
+  "home_rating": 1589,
+  "away_rating": 1556,
+  "winner": "away",
+  "odds": {
+   "home": "1.90",
+   "away": "3.60",
+   "draw": "3.61"
+  }
+ },
+ {
+  "event": "DEMO-BT-058",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-24T16:00:00+00:00",
+  "start": "2026-01-24T19:00:00+00:00",
+  "settled": "2026-01-24T21:30:00+00:00",
+  "home_rating": 1726,
+  "away_rating": 1388,
+  "winner": "home",
+  "odds": {
+   "home": "1.08",
+   "away": "7.55"
+  }
+ },
+ {
+  "event": "DEMO-BT-059",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-24T17:00:00+00:00",
+  "start": "2026-01-24T20:00:00+00:00",
+  "settled": "2026-01-24T22:30:00+00:00",
+  "home_rating": 1354,
+  "away_rating": 1455,
+  "winner": "home",
+  "odds": {
+   "home": "2.01",
+   "away": "1.82"
+  }
+ },
+ {
+  "event": "DEMO-BT-060",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-25T15:00:00+00:00",
+  "start": "2026-01-25T18:00:00+00:00",
+  "settled": "2026-01-25T20:30:00+00:00",
+  "home_rating": 1697,
+  "away_rating": 1377,
+  "winner": "home",
+  "odds": {
+   "home": "1.26",
+   "away": "12.16",
+   "draw": "5.42"
+  }
+ },
+ {
+  "event": "DEMO-BT-061",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-25T16:00:00+00:00",
+  "start": "2026-01-25T19:00:00+00:00",
+  "settled": "2026-01-25T21:30:00+00:00",
+  "home_rating": 1405,
+  "away_rating": 1439,
+  "winner": "home",
+  "odds": {
+   "home": "2.24",
+   "away": "1.72"
+  }
+ },
+ {
+  "event": "DEMO-BT-062",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-25T17:00:00+00:00",
+  "start": "2026-01-25T20:00:00+00:00",
+  "settled": "2026-01-25T22:30:00+00:00",
+  "home_rating": 1563,
+  "away_rating": 1558,
+  "winner": "home",
+  "odds": {
+   "home": "1.57",
+   "away": "2.31"
+  }
+ },
+ {
+  "event": "DEMO-BT-063",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-26T15:00:00+00:00",
+  "start": "2026-01-26T18:00:00+00:00",
+  "settled": "2026-01-26T20:30:00+00:00",
+  "home_rating": 1721,
+  "away_rating": 1381,
+  "winner": "home",
+  "odds": {
+   "home": "1.31",
+   "away": "12.52",
+   "draw": "5.43"
+  }
+ },
+ {
+  "event": "DEMO-BT-064",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-26T16:00:00+00:00",
+  "start": "2026-01-26T19:00:00+00:00",
+  "settled": "2026-01-26T21:30:00+00:00",
+  "home_rating": 1485,
+  "away_rating": 1552,
+  "winner": "away",
+  "odds": {
+   "home": "2.18",
+   "away": "1.68"
+  }
+ },
+ {
+  "event": "DEMO-BT-065",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-26T17:00:00+00:00",
+  "start": "2026-01-26T20:00:00+00:00",
+  "settled": "2026-01-26T22:30:00+00:00",
+  "home_rating": 1750,
+  "away_rating": 1387,
+  "winner": "home",
+  "odds": {
+   "home": "1.04",
+   "away": "13.56"
+  }
+ },
+ {
+  "event": "DEMO-BT-066",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-27T15:00:00+00:00",
+  "start": "2026-01-27T18:00:00+00:00",
+  "settled": "2026-01-27T20:30:00+00:00",
+  "home_rating": 1379,
+  "away_rating": 1682,
+  "winner": "away",
+  "odds": {
+   "home": "6.36",
+   "away": "1.62",
+   "draw": "4.43"
+  }
+ },
+ {
+  "event": "DEMO-BT-067",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-27T16:00:00+00:00",
+  "start": "2026-01-27T19:00:00+00:00",
+  "settled": "2026-01-27T21:30:00+00:00",
+  "home_rating": 1649,
+  "away_rating": 1689,
+  "winner": "away",
+  "odds": {
+   "home": "2.11",
+   "away": "1.74"
+  }
+ },
+ {
+  "event": "DEMO-BT-068",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-27T17:00:00+00:00",
+  "start": "2026-01-27T20:00:00+00:00",
+  "settled": "2026-01-27T22:30:00+00:00",
+  "home_rating": 1378,
+  "away_rating": 1481,
+  "winner": "away",
+  "odds": {
+   "home": "2.14",
+   "away": "1.70"
+  }
+ },
+ {
+  "event": "DEMO-BT-069",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-28T15:00:00+00:00",
+  "start": "2026-01-28T18:00:00+00:00",
+  "settled": "2026-01-28T20:30:00+00:00",
+  "home_rating": 1678,
+  "away_rating": 1502,
+  "winner": "home",
+  "odds": {
+   "home": "1.43",
+   "away": "5.66",
+   "draw": "4.20"
+  }
+ },
+ {
+  "event": "DEMO-BT-070",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-28T16:00:00+00:00",
+  "start": "2026-01-28T19:00:00+00:00",
+  "settled": "2026-01-28T21:30:00+00:00",
+  "home_rating": 1529,
+  "away_rating": 1630,
+  "winner": "home",
+  "odds": {
+   "home": "2.47",
+   "away": "1.37"
+  }
+ },
+ {
+  "event": "DEMO-BT-071",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-28T17:00:00+00:00",
+  "start": "2026-01-28T20:00:00+00:00",
+  "settled": "2026-01-28T22:30:00+00:00",
+  "home_rating": 1690,
+  "away_rating": 1418,
+  "winner": "home",
+  "odds": {
+   "home": "1.10",
+   "away": "7.79"
+  }
+ },
+ {
+  "event": "DEMO-BT-072",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-29T15:00:00+00:00",
+  "start": "2026-01-29T18:00:00+00:00",
+  "settled": "2026-01-29T20:30:00+00:00",
+  "home_rating": 1445,
+  "away_rating": 1666,
+  "winner": "draw",
+  "odds": {
+   "home": "4.25",
+   "away": "1.76",
+   "draw": "4.17"
+  }
+ },
+ {
+  "event": "DEMO-BT-073",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-29T16:00:00+00:00",
+  "start": "2026-01-29T19:00:00+00:00",
+  "settled": "2026-01-29T21:30:00+00:00",
+  "home_rating": 1743,
+  "away_rating": 1470,
+  "winner": "home",
+  "odds": {
+   "home": "1.21",
+   "away": "5.82"
+  }
+ },
+ {
+  "event": "DEMO-BT-074",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-29T17:00:00+00:00",
+  "start": "2026-01-29T20:00:00+00:00",
+  "settled": "2026-01-29T22:30:00+00:00",
+  "home_rating": 1612,
+  "away_rating": 1738,
+  "winner": "home",
+  "odds": {
+   "home": "2.34",
+   "away": "1.73"
+  }
+ },
+ {
+  "event": "DEMO-BT-075",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-30T15:00:00+00:00",
+  "start": "2026-01-30T18:00:00+00:00",
+  "settled": "2026-01-30T20:30:00+00:00",
+  "home_rating": 1641,
+  "away_rating": 1513,
+  "winner": "home",
+  "odds": {
+   "home": "1.70",
+   "away": "5.08",
+   "draw": "3.95"
+  }
+ },
+ {
+  "event": "DEMO-BT-076",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-30T16:00:00+00:00",
+  "start": "2026-01-30T19:00:00+00:00",
+  "settled": "2026-01-30T21:30:00+00:00",
+  "home_rating": 1457,
+  "away_rating": 1615,
+  "winner": "away",
+  "odds": {
+   "home": "3.41",
+   "away": "1.41"
+  }
+ },
+ {
+  "event": "DEMO-BT-077",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-30T17:00:00+00:00",
+  "start": "2026-01-30T20:00:00+00:00",
+  "settled": "2026-01-30T22:30:00+00:00",
+  "home_rating": 1423,
+  "away_rating": 1510,
+  "winner": "home",
+  "odds": {
+   "home": "2.03",
+   "away": "1.81"
+  }
+ },
+ {
+  "event": "DEMO-BT-078",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-01-31T15:00:00+00:00",
+  "start": "2026-01-31T18:00:00+00:00",
+  "settled": "2026-01-31T20:30:00+00:00",
+  "home_rating": 1590,
+  "away_rating": 1689,
+  "winner": "home",
+  "odds": {
+   "home": "2.66",
+   "away": "2.45",
+   "draw": "3.56"
+  }
+ },
+ {
+  "event": "DEMO-BT-079",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-01-31T16:00:00+00:00",
+  "start": "2026-01-31T19:00:00+00:00",
+  "settled": "2026-01-31T21:30:00+00:00",
+  "home_rating": 1364,
+  "away_rating": 1395,
+  "winner": "away",
+  "odds": {
+   "home": "2.03",
+   "away": "1.79"
+  }
+ },
+ {
+  "event": "DEMO-BT-080",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-01-31T17:00:00+00:00",
+  "start": "2026-01-31T20:00:00+00:00",
+  "settled": "2026-01-31T22:30:00+00:00",
+  "home_rating": 1569,
+  "away_rating": 1382,
+  "winner": "home",
+  "odds": {
+   "home": "1.12",
+   "away": "5.56"
+  }
+ },
+ {
+  "event": "DEMO-BT-081",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-02-01T15:00:00+00:00",
+  "start": "2026-02-01T18:00:00+00:00",
+  "settled": "2026-02-01T20:30:00+00:00",
+  "home_rating": 1722,
+  "away_rating": 1717,
+  "winner": "away",
+  "odds": {
+   "home": "2.22",
+   "away": "3.32",
+   "draw": "3.62"
+  }
+ },
+ {
+  "event": "DEMO-BT-082",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-02-01T16:00:00+00:00",
+  "start": "2026-02-01T19:00:00+00:00",
+  "settled": "2026-02-01T21:30:00+00:00",
+  "home_rating": 1729,
+  "away_rating": 1650,
+  "winner": "away",
+  "odds": {
+   "home": "1.52",
+   "away": "2.25"
+  }
+ },
+ {
+  "event": "DEMO-BT-083",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-02-01T17:00:00+00:00",
+  "start": "2026-02-01T20:00:00+00:00",
+  "settled": "2026-02-01T22:30:00+00:00",
+  "home_rating": 1728,
+  "away_rating": 1541,
+  "winner": "home",
+  "odds": {
+   "home": "1.11",
+   "away": "5.35"
+  }
+ },
+ {
+  "event": "DEMO-BT-084",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-02-02T15:00:00+00:00",
+  "start": "2026-02-02T18:00:00+00:00",
+  "settled": "2026-02-02T20:30:00+00:00",
+  "home_rating": 1572,
+  "away_rating": 1611,
+  "winner": "away",
+  "odds": {
+   "home": "2.43",
+   "away": "2.67",
+   "draw": "3.51"
+  }
+ },
+ {
+  "event": "DEMO-BT-085",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-02-02T16:00:00+00:00",
+  "start": "2026-02-02T19:00:00+00:00",
+  "settled": "2026-02-02T21:30:00+00:00",
+  "home_rating": 1476,
+  "away_rating": 1626,
+  "winner": "away",
+  "odds": {
+   "home": "3.24",
+   "away": "1.31"
+  }
+ },
+ {
+  "event": "DEMO-BT-086",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-02-02T17:00:00+00:00",
+  "start": "2026-02-02T20:00:00+00:00",
+  "settled": "2026-02-02T22:30:00+00:00",
+  "home_rating": 1536,
+  "away_rating": 1625,
+  "winner": "home",
+  "odds": {
+   "home": "1.81",
+   "away": "1.76"
+  }
+ },
+ {
+  "event": "DEMO-BT-087",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "soccer",
+  "observed": "2026-02-03T15:00:00+00:00",
+  "start": "2026-02-03T18:00:00+00:00",
+  "settled": "2026-02-03T20:30:00+00:00",
+  "home_rating": 1652,
+  "away_rating": 1657,
+  "winner": "away",
+  "odds": {
+   "home": "2.09",
+   "away": "3.15",
+   "draw": "3.90"
+  }
+ },
+ {
+  "event": "DEMO-BT-088",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "tennis",
+  "observed": "2026-02-03T16:00:00+00:00",
+  "start": "2026-02-03T19:00:00+00:00",
+  "settled": "2026-02-03T21:30:00+00:00",
+  "home_rating": 1546,
+  "away_rating": 1423,
+  "winner": "away",
+  "odds": {
+   "home": "1.52",
+   "away": "2.72"
+  }
+ },
+ {
+  "event": "DEMO-BT-089",
+  "source": "DEMO / SYNTHÉTIQUE",
+  "sport": "basketball",
+  "observed": "2026-02-03T17:00:00+00:00",
+  "start": "2026-02-03T20:00:00+00:00",
+  "settled": "2026-02-03T22:30:00+00:00",
+  "home_rating": 1563,
+  "away_rating": 1364,
+  "winner": "home",
+  "odds": {
+   "home": "1.08",
+   "away": "5.95"
+  }
+ }
+]

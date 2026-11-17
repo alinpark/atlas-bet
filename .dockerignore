@@ -5,10 +5,6 @@
 !models.py
 !providers.py
 !workflow.py
-!telegram_bot.py
-!worker.py
-!ai-engine/
-!ai-engine/pyproject.toml
+!ai-engine/requirements.txt
+!ai-engine/wheels/
 !ai-engine/app/
-!ai-engine/app/main.py
-!ai-engine/app/__init__.py

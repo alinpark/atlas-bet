@@ -1,44 +1,105 @@
+# Stack Atlas Bet : PostgreSQL (registre unique), moteur FastAPI, backend Spring.
+# Production : copier .env.example en .env et renseigner les secrets (variables obligatoires).
+# Démo sans secret : scripts/start-demo.ps1 (ajoute compose.demo.yaml et demo.env).
 name: atlas-bet
-x-container: &container
-  image: atlas-bet-cli
-  build: .
-  volumes:
-    - ledger:/data
-  init: true
-  logging:
-    driver: json-file
-    options: {max-size: "10m", max-file: "3"}
-  mem_limit: 128m
-  cpus: 0.5
-  security_opt:
-    - no-new-privileges:true
-  cap_drop:
-    - ALL
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+
 services:
-  cli:
-    <<: *container
+  postgres:
+    image: postgres:17-alpine
+    init: true
     environment:
-      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-}
+      POSTGRES_DB: atlas_bet
+      POSTGRES_USER: atlas_bet
+      POSTGRES_PASSWORD: ${BET_DB_PASSWORD:?BET_DB_PASSWORD requis}
+    volumes:
+      - db:/var/lib/postgresql/data
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "atlas_bet", "-d", "atlas_bet"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+
+  ai-engine:
+    build:
+      context: .
+      dockerfile: ai-engine/Dockerfile
+      args:
+        OFFLINE_WHEELS: ${OFFLINE_WHEELS:-0}
+    image: atlas-bet-engine:local
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    environment:
+      BET_ENGINE_TOKEN: ${BET_ENGINE_TOKEN:?BET_ENGINE_TOKEN requis}
       SPORTS_ODDS_COMPETITIONS: ${SPORTS_ODDS_COMPETITIONS:-}
-  collector:
-    <<: *container
-    profiles: [collect]
-    entrypoint: [python, -m, worker, collect]
-    command: []
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+
+  backend:
+    build: ./backend
+    image: atlas-bet-backend:local
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
     restart: unless-stopped
     environment:
+      BET_JDBC_URL: jdbc:postgresql://postgres:5432/atlas_bet
+      BET_DB_PASSWORD: ${BET_DB_PASSWORD:?BET_DB_PASSWORD requis}
+      BET_ADMIN_USER: ${BET_ADMIN_USER:-admin}
+      BET_ADMIN_PASSWORD: ${BET_ADMIN_PASSWORD:?BET_ADMIN_PASSWORD requis}
+      AI_ENGINE_URL: http://ai-engine:8000
+      BET_ENGINE_TOKEN: ${BET_ENGINE_TOKEN:?BET_ENGINE_TOKEN requis}
+      ODDS_PROVIDER: ${ODDS_PROVIDER:-fixture}
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-}
       SPORTS_ODDS_COMPETITIONS: ${SPORTS_ODDS_COMPETITIONS:-}
-      SPORTS_COLLECT_INTERVAL: ${SPORTS_COLLECT_INTERVAL:-900}
-  telegram:
-    <<: *container
-    profiles: [telegram]
-    entrypoint: [python, -m, worker, telegram]
-    command: []
-    restart: unless-stopped
-    environment:
+      SPORTS_COLLECT_INTERVAL_MS: ${SPORTS_COLLECT_INTERVAL_MS:-900000}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
-volumes:
-  ledger:
+      TELEGRAM_SIMULATOR: ${TELEGRAM_SIMULATOR:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-engine:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BET_HTTP_PORT:-18082}:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /api/v1/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    logging: *logging
 
+  # Outils Python hors ligne (démo SQLite, backtest de fichiers) : docker compose --profile tools run --rm cli ...
+  cli:
+    profiles: [tools]
+    build: .
+    image: atlas-bet-cli:local
+    volumes:
+      - tools:/data
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  db:
+  tools:

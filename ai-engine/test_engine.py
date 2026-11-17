@@ -24,5 +24,7 @@ class EngineContractTest(unittest.TestCase):
                 self.assertEqual(len(payload["outcomes"]), count)
                 self.assertAlmostEqual(sum(item["p"] for item in payload["outcomes"]), 1)
                 self.assertTrue(all(item["pLower"] is None for item in payload["outcomes"]))
+            metrics = client.get("/models/metrics", headers=headers).json()
+            self.assertEqual(metrics["modelStatus"], "UNVALIDATED")
             sample["featureTimestamp"] = sample["startsAt"]
             self.assertEqual(client.post("/predict/soccer", json=sample, headers=headers).status_code, 422)
