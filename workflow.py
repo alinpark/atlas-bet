@@ -2,6 +2,7 @@
 import hashlib
 import json
 import math
+import random
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
@@ -149,7 +150,7 @@ def temporal_report(samples):
         uniform = 1 - 1 / len(MARKETS[sport])
         by_sport[sport] = dict(evaluate(rows), uniform_brier=uniform if rows else None)
     return {"status": "UNVALIDATED", "overall": evaluate(verified), "sports": by_sport,
-            "walk_forward": walk_forward(verified)}
+            "walk_forward": walk_forward(verified), "price_baselines": price_baselines(verified)}
 
 
 def walk_forward(samples):
@@ -190,3 +191,23 @@ def walk_forward(samples):
 
 
 
+
+def price_baselines(samples):
+    """Compare fixed one-unit selections on complete pre-event odds."""
+    random_source = random.Random(42)
+    nets = dict.fromkeys(("favorite", "random"), Decimal(0))
+    brier, count = 0.0, 0
+    for row in samples:
+        if "odds" not in row:
+            continue
+        validate_snapshot(row)
+        prices = {key: Decimal(str(row["odds"][key])) for key in MARKETS[row["sport"]]}
+        reciprocal = {key: float(1 / value) for key, value in prices.items()}
+        total = sum(reciprocal.values())
+        brier += sum((value / total - (key == row["winner"])) ** 2 for key, value in reciprocal.items())
+        selections = {"favorite": min(prices, key=prices.get), "random": random_source.choice(tuple(prices))}
+        for method, selection in selections.items():
+            nets[method] += prices[selection] - 1 if selection == row["winner"] else -1
+        count += 1
+    return {"count": count, "de_vig_brier": brier / count if count else None,
+            "roi": {key: str(net / count) if count else None for key, net in nets.items()}}

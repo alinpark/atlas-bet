@@ -188,3 +188,13 @@ class PriorityRegressionTest(unittest.TestCase):
         self.assertEqual(exit_code.exception.code, 2)
         self.assertIn("database is locked", errors.getvalue())
         self.assertNotIn("Traceback", errors.getvalue())
+
+class PriceBaselineTest(unittest.TestCase):
+    def test_favorite_and_devig_on_known_sample(self):
+        event = demo()[1]
+        row = dict(event, odds={"home": "1.50", "away": "3.00"},
+                   settled=(datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+                   winner="home", home_rating=1500, away_rating=1400)
+        baseline = temporal_report([row])["price_baselines"]
+        self.assertEqual(baseline["roi"]["favorite"], "0.50")
+        self.assertAlmostEqual(baseline["de_vig_brier"], 2/9)
