@@ -26,11 +26,12 @@ import org.springframework.stereotype.Component;
  * Sans clé : NOT_CONFIGURED, et aucune sélection réelle ne peut passer le garde-fou.
  */
 @Component
-public class TeamNews {
+public class TeamNews implements Providers.ResultsProvider {
     static final String SOURCE = "api-football";
     private static final Logger LOG = LoggerFactory.getLogger(TeamNews.class);
     /** Compétitions The Odds API → identifiants de ligue API-Football. */
-    private static final Map<String, Integer> LEAGUES = Map.of("soccer_france_ligue_one", 61);
+    private static final Map<String, Integer> LEAGUES = Competitions.ALL.stream().collect(java.util.stream.Collectors.toMap(Competitions.Competition::id,Competitions.Competition::newsId));
+    @Override public String name() { return SOURCE; }
 
     private final JdbcTemplate db;
     private final ObjectMapper json;
@@ -69,7 +70,7 @@ public class TeamNews {
     }
 
     /** Met à jour les matchs réels des prochaines 48 h. Renvoie le nombre de requêtes faites. */
-    public int refresh(Instant now) {
+    public synchronized int refresh(Instant now) {
         if (!configured()) {
             health("NOT_CONFIGURED", "API_FOOTBALL_KEY absent : compositions et blessés non suivis");
             return 0;
@@ -97,17 +98,18 @@ public class TeamNews {
                 String fixture = Rows.text(event, "fixture_id");
                 if (fixture == null) {
                     String day = Rows.text(event, "day");
-                    if (!fixtures.containsKey(day)) {
+                    String cacheKey=league+":"+day;
+                    if (!fixtures.containsKey(cacheKey)) {
                         if (!budget(now)) {
                             break;
                         }
                         LocalDate date = LocalDate.parse(day);
                         int season = date.getMonthValue() >= 7 ? date.getYear() : date.getYear() - 1;
-                        fixtures.put(day, fixtureIndex(call("/fixtures?league=" + league + "&season=" + season
-                            + "&date=" + day, now)));
+                        fixtures.put(cacheKey, fixtureIndex(call("/fixtures?league=" + league + "&season=" + season
+                            + "&date=" + day + "&timezone=Europe%2FParis", now)));
                         calls++;
                     }
-                    fixture = fixtures.get(day).get(RealRatings.key(Rows.text(event, "home")) + "|"
+                    fixture = fixtures.get(cacheKey).get(RealRatings.key(Rows.text(event, "home")) + "|"
                         + RealRatings.key(Rows.text(event, "away")));
                     if (fixture == null) {
                         continue; // match non trouvé : signalé dans provider_health
@@ -150,6 +152,55 @@ public class TeamNews {
                 item.path("fixture").path("id").asText());
         }
         return index;
+    }
+
+    /** Règlement des coupes sur score.fulltime seulement, jamais goals / penalty / extratime. */
+    @Override public synchronized List<Providers.Result> results(List<Map<String,Object>> pending,Instant now) {
+        if(!configured()) return List.of();
+        List<Providers.Result> result=new java.util.ArrayList<>();
+        Map<String,JsonNode> calendars=new HashMap<>();
+        for(var event:pending) {
+            if(!Competitions.cup(Rows.text(event,"competition"))) continue;
+            String id=Rows.text(event,"id"),slot="cup_result:"+id;
+            var last=db.queryForList("SELECT value FROM app_setting WHERE key=?",String.class,slot);
+            if(!last.isEmpty() && Instant.parse(last.getFirst()).plus(Duration.ofHours(12)).isAfter(now)) continue;
+            var fixtures=db.queryForList("SELECT fixture_id FROM team_news WHERE event_id=? AND fixture_id IS NOT NULL",String.class,id);
+            db.update("INSERT INTO app_setting VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",slot,now.toString());
+            try {
+                if(fixtures.isEmpty()) {
+                    var local=db.queryForMap(Observatory.EVENTS+" WHERE e.id=?",id);
+                    var day=Rows.instant(local,"starts_at").atZone(Rows.PARIS).toLocalDate();
+                    String cacheKey=event.get("competition")+":"+day;
+                    if(!calendars.containsKey(cacheKey)) {
+                        if(!budget(now)) break;
+                        int season=day.getMonthValue()>=7?day.getYear():day.getYear()-1;
+                        calendars.put(cacheKey,call("/fixtures?league="+LEAGUES.get(event.get("competition"))+"&season="+season+"&date="+day+"&timezone=Europe%2FParis",now));
+                    }
+                    for(JsonNode fixture:calendars.get(cacheKey).path("response")) {
+                        if(!RealRatings.key(Rows.text(local,"home")).equals(RealRatings.key(fixture.path("teams").path("home").path("name").asText()))
+                            || !RealRatings.key(Rows.text(local,"away")).equals(RealRatings.key(fixture.path("teams").path("away").path("name").asText()))) continue;
+                        var parsed=fullTimeResult(id,fixture,now); if(parsed!=null) result.add(parsed);
+                    }
+                    continue;
+                }
+                if(!budget(now)) break;
+                var body=call("/fixtures?id="+fixtures.getFirst(),now);
+                for(JsonNode fixture:body.path("response")) {
+                    var parsed=fullTimeResult(id,fixture,now);
+                    if(parsed!=null) result.add(parsed);
+                }
+            } catch(RuntimeException error) { health("ERROR",error.getMessage()); }
+        }
+        return result;
+    }
+    static Providers.Result fullTimeResult(String id,JsonNode fixture,Instant now) {
+        String status=fixture.path("fixture").path("status").path("short").asText();
+        if(!java.util.Set.of("FT","AET","PEN").contains(status)) return null;
+        JsonNode score=fixture.path("score").path("fulltime");
+        if(!score.path("home").isIntegralNumber() || !score.path("away").isIntegralNumber()) return null;
+        int home=score.path("home").asInt(),away=score.path("away").asInt();
+        if(home<0 || away<0) return null;
+        return new Providers.Result(id,home>away?"home":home<away?"away":"draw",false,now,SOURCE+":90min");
     }
 
     ArrayNode injuries(JsonNode body) {

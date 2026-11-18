@@ -31,7 +31,7 @@ class PipelineTest extends PostgresTest {
         assertEquals(3, count("paper_bet"));
         assertEquals(3, count("telegram_outbox"));
         assertTrue(db.queryForObject("SELECT payload->>'text' FROM telegram_outbox ORDER BY id LIMIT 1", String.class)
-            .startsWith("[DEMO / SYNTHÉTIQUE"));
+            .startsWith("🧪 DÉMO — MATCH FICTIF"));
         // Second cycle (équivalent d'un redémarrage) : aucun doublon.
         pipeline.runOnce();
         assertEquals(3, count("event"));

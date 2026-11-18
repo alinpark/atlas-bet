@@ -131,7 +131,7 @@ public class Pipeline {
     }
 
     private int store(OddsEvent event) {
-        db.update("INSERT INTO competition VALUES (?,?,?) ON CONFLICT DO NOTHING",
+        db.update("INSERT INTO competition VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name",
             event.competitionId(), event.sport(), event.competitionName());
         String eventId = event.eventId();
         // Reprogrammation : la date change tant que le match n'est pas joué ; xmax=0 signale une création.
@@ -407,7 +407,8 @@ public class Pipeline {
         var pending = db.queryForList("""
             SELECT e.id, e.source, e.competition FROM event e
             WHERE e.status='SCHEDULED' AND e.starts_at < now() - interval '2 hours'
-              AND e.starts_at > now() - interval '3 days'
+              AND e.starts_at > now() - interval '30 days'
+              AND (e.starts_at > now() - interval '3 days' OR e.competition IN ('soccer_uefa_champs_league','soccer_uefa_europa_league'))
               AND (EXISTS (SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id
                           JOIN odds_snapshot s ON s.id=o.odds_id WHERE s.event_id=e.id)
                    OR EXISTS (SELECT 1 FROM research_observation o WHERE o.event_id=e.id))

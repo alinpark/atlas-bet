@@ -53,6 +53,40 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     boolean adaptive;
     @Value("${bet.odds.monthly-budget:400}")
     int monthlyBudget=400;
+    @Value("${bet.odds.scheduled:true}")
+    boolean scheduled;
+
+    private boolean reserveCompetition(String competition,int credits,Instant now) {
+        if(!scheduled) return reserve(credits,now);
+        String month=java.time.YearMonth.from(now.atZone(java.time.ZoneOffset.UTC)).toString();
+        int allowance=monthlyBudget/Math.max(1,competitions.size());
+        int limit=credits==1?Math.max(0,allowance-20):allowance; // réserve de résultats par compétition
+        int used=db.queryForObject("SELECT coalesce(sum(reserved),0)::int FROM competition_budget WHERE month=? AND competition=?",Integer.class,month,competition);
+        if(used+credits>limit) { collection(competition,"BUDGET DE COMPÉTITION ATTEINT",null,null,0); return false; }
+        if(!reserve(credits,now)) return false;
+        db.update("INSERT INTO competition_budget VALUES (?,?,?) ON CONFLICT(month,competition) DO UPDATE SET reserved=competition_budget.reserved+EXCLUDED.reserved",month,competition,credits);
+        return true;
+    }
+    private void collection(String competition,String status,Instant calendar,Instant odds,int events) {
+        db.update("""
+            INSERT INTO competition_collection VALUES (?,?,?,?,?) ON CONFLICT(competition) DO UPDATE SET
+            calendar_at=coalesce(EXCLUDED.calendar_at,competition_collection.calendar_at),
+            odds_at=coalesce(EXCLUDED.odds_at,competition_collection.odds_at),status=EXCLUDED.status,
+            events=CASE WHEN EXCLUDED.calendar_at IS NULL THEN competition_collection.events ELSE EXCLUDED.events END
+            """,competition,Rows.sql(calendar),Rows.sql(odds),status,events);
+    }
+
+    /** Un relevé d'entrée à H-60 et un de clôture à H-10 par horaire de coup d'envoi. */
+    private List<String> windows(String competition,Instant now) {
+        List<String> slots=new ArrayList<>();
+        for(var row:db.queryForList("SELECT DISTINCT starts_at FROM event WHERE source='odds-api' AND competition=? AND status='SCHEDULED' AND starts_at>? AND starts_at<=?",competition,Rows.sql(now),Rows.sql(now.plus(Duration.ofMinutes(60))))) {
+            Instant start=Rows.instant(row,"starts_at");
+            String phase=start.isAfter(now.plus(Duration.ofMinutes(10)))?"entry":"close";
+            String slot="window:"+competition+":"+start+":"+phase;
+            if(db.queryForList("SELECT value FROM app_setting WHERE key=?",slot).isEmpty()) slots.add(slot);
+        }
+        return slots;
+    }
 
     /** Réservation conservatrice persistante : erreurs réseau comptées, tous les appels inclus. */
     private boolean reserve(int credits, Instant at) {
@@ -151,20 +185,41 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         }
         List<OddsEvent> events = new ArrayList<>();
         for (String competition : competitions) {
+            if(blocked()) break;
+            if(scheduled) {
+                String calendarSlot="calendar:"+competition;
+                var last=db.queryForList("SELECT value FROM app_setting WHERE key=?",String.class,calendarSlot);
+                if(last.isEmpty() || !Instant.parse(last.getFirst()).plus(Duration.ofHours(6)).isAfter(now)) {
+                    spent(calendarSlot,now);
+                    JsonNode calendar=call("/v4/sports/"+competition+"/events?dateFormat=iso");
+                    if(calendar!=null && calendar.isArray()) {
+                        var known=parseCalendar(calendar,competition,now); events.addAll(known);
+                        collection(competition,"CALENDRIER REÇU — COTES AUX FENÊTRES DE MATCH",now,null,known.size());
+                    } else collection(competition,"CALENDRIER INDISPONIBLE",null,null,0);
+                }
+            }
+            var windows=scheduled?windows(competition,now):List.<String>of();
+            if(scheduled && windows.isEmpty()) continue;
             String slot = "odds_last:" + competition;
-            if (!due(slot, interval(competition,now), now) || !reserve(1,now)) {
+            if (!due(slot, scheduled?Duration.ofMinutes(5):interval(competition,now), now) || !reserveCompetition(competition,1,now)) {
                 continue;
             }
             spent(slot, now);
+            if(scheduled) windows.forEach(w->spent(w,now));
             String path = "/v4/sports/" + competition + "/odds?bookmakers=betclic_fr,netbet_fr,pmu_fr,unibet_fr,winamax_fr,pinnacle&markets=h2h&oddsFormat=decimal&dateFormat=iso";
             JsonNode body = call(path);
             if (body == null) {
+                if(scheduled) collection(competition,"COTES INDISPONIBLES",null,null,0);
                 if (blocked()) {
                     break;
                 }
                 continue;
             }
-            events.addAll(parseOdds(body, now));
+            var parsed=parseOdds(body,now);
+            events.addAll(parsed);
+            if(scheduled) {
+                collection(competition,parsed.isEmpty()?"AUCUNE COTE FRAÎCHE EXPLOITABLE":"COTES REÇUES",null,now,0);
+            }
         }
         return events;
     }
@@ -185,9 +240,11 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
         }
         List<Result> results = new ArrayList<>();
         for (String competition : sports) {
+            // Les scores agrégés ne garantissent pas le résultat à 90 minutes des coupes.
+            if(Competitions.cup(competition)) continue;
             if (blocked()) break;
             String slot = "scores_last:" + competition;
-            if (!due(slot, scoresInterval, now) || !reserve(2,now)) {
+            if (!due(slot, scoresInterval, now) || !reserveCompetition(competition,2,now)) {
                 continue;
             }
             spent(slot, now);
@@ -258,7 +315,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
                 }
             }
             if (!prices.isEmpty()) {
-                events.add(new OddsEvent(SOURCE, event.path("id").asText(), sport, competition, competition,
+                events.add(new OddsEvent(SOURCE, event.path("id").asText(), sport, competition, Competitions.name(competition),
                     home, away, start, observed, prices));
             }
         }
@@ -268,6 +325,7 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
     static List<Result> parseScores(JsonNode body, Set<String> wanted, Instant now) {
         List<Result> results = new ArrayList<>();
         for (JsonNode event : body) {
+            if(Competitions.cup(event.path("sport_key").asText())) continue;
             String id = SOURCE + ":" + event.path("id").asText();
             if (!wanted.contains(id) || !event.path("completed").asBoolean(false)) {
                 continue;
@@ -290,6 +348,17 @@ public class TheOddsApi implements Providers.OddsProvider, Providers.ResultsProv
             results.add(new Result(id, winner, false, now, SOURCE));
         }
         return results;
+    }
+
+    static List<OddsEvent> parseCalendar(JsonNode body,String competition,Instant now) {
+        List<OddsEvent> events=new ArrayList<>();
+        for(JsonNode e:body) try {
+            Instant start=Instant.parse(e.path("commence_time").asText());
+            String id=e.path("id").asText(),home=e.path("home_team").asText(),away=e.path("away_team").asText();
+            if(start.isAfter(now) && !id.isBlank() && !home.isBlank() && !away.isBlank() && !home.equals(away))
+                events.add(new OddsEvent(SOURCE,id,"soccer",competition,Competitions.name(competition),home,away,start,now,List.of()));
+        } catch(RuntimeException ignored) { }
+        return events;
     }
 
     private JsonNode call(String path) {

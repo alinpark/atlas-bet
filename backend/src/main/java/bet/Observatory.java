@@ -61,14 +61,19 @@ public class Observatory {
 
     @Transactional
     public int capture() {
-        var exp=experiment(); var p=params(exp); Instant at=now();
+        int count=0;
+        for(var exp:db.queryForList("SELECT * FROM research_experiment WHERE capture_enabled ORDER BY id")) count+=capture(exp);
+        return count;
+    }
+    private int capture(Map<String,Object> exp) {
+        var p=params(exp); Instant at=now();
         if (!at.isBefore(Rows.instant(exp,"ends_at"))) return 0;
         var events=db.queryForList("""
             SELECT e.id FROM event e WHERE e.source='odds-api' AND e.competition=? AND e.status='SCHEDULED'
               AND e.starts_at>? AND e.starts_at<=? AND NOT EXISTS
               (SELECT 1 FROM research_observation o WHERE o.event_id=e.id AND o.experiment_id=?)
             ORDER BY e.starts_at,e.id
-            """,exp.get("competition"),Rows.sql(at),exp.get("ends_at"),exp.get("id"));
+            """,exp.get("competition"),Rows.sql(p.path("descriptive_only").asBoolean()?at.plus(Duration.ofMinutes(15)):at),exp.get("ends_at"),exp.get("id"));
         int count=0;
         for(var event:events) {
             var all=prices(Rows.text(event,"id"),at);
@@ -104,10 +109,21 @@ public class Observatory {
         return Map.of("at",at,"events",events,"risk",status,
             "providers",db.queryForList("SELECT id,status,detail,quota_remaining,quota_at,checked_at FROM provider_health ORDER BY id"),
             "collection",db.queryForList("SELECT * FROM collection_budget ORDER BY month DESC LIMIT 1"),
-            "mode","PAPER — aucune validation de rentabilité");
+            "competitions",competitions(), "mode","PAPER — aucune validation de rentabilité");
+    }
+    public List<Map<String,Object>> competitions() {
+        return Competitions.ALL.stream().map(c->{
+            Map<String,Object> row=new LinkedHashMap<>(); row.put("id",c.id()); row.put("name",c.name());
+            row.put("rules","1X2 à 90 minutes, arrêts de jeu inclus ; hors prolongations et tirs au but");
+            row.put("upcoming",db.queryForObject("SELECT count(*) FROM event WHERE competition=? AND source='odds-api' AND status='SCHEDULED' AND starts_at>now() AND starts_at<now()+interval '7 days'",Long.class,c.id()));
+            row.put("collection",db.queryForList("SELECT * FROM competition_collection WHERE competition=?",c.id()));
+            row.put("results",c.cup()?"Score à 90 minutes requis (API-Football)":"Scores The Odds API");
+            return row;
+        }).toList();
     }
     private void enrich(Map<String,Object> event,Instant at,Map<String,Object> status) {
         String id=Rows.text(event,"id"); var all=prices(id,at);
+        event.put("competition_name",Competitions.name(Rows.text(event,"competition")));
         var probs=fair(all,at,15); List<String> reasons=new ArrayList<>();
         boolean demo="DEMO".equals(event.get("source"));
         if(demo) reasons.add("Match fictif : exclu de l'expérience réelle");
@@ -122,6 +138,7 @@ public class Observatory {
         if(pred.isEmpty()) reasons.add("Probabilités du modèle indisponibles");
         else if(pred.stream().anyMatch(p->!"VALIDATED".equals(p.get("model_status")))) reasons.add("Modèle non validé : observation uniquement");
         if(!demo && !news.lineupsConfirmed(id)) reasons.add("Compositions officielles non confirmées");
+        if(!demo && Competitions.cup(Rows.text(event,"competition")) && !news.configured()) reasons.add("Résultat à 90 minutes non suivi : API-Football non configurée");
         if(Boolean.TRUE.equals(status.get("blocked"))) reasons.add("Propositions bloquées par la politique de risque");
         event.put("reasons",reasons); event.put("prices",all); event.put("reference_probabilities",probs);
         event.put("predictions",pred); event.put("demo",demo);
@@ -165,7 +182,13 @@ public class Observatory {
     }
 
     public Map<String,Object> laboratory() {
-        var exp=experiment(); var parameters=params(exp); Instant at=now();
+        return laboratory("fr-pinnacle-v1");
+    }
+    public List<Map<String,Object>> experiments() { return db.queryForList("SELECT id,competition,started_at,ends_at,capture_enabled FROM research_experiment ORDER BY capture_enabled DESC,competition,id"); }
+    public Map<String,Object> laboratory(String id) {
+        var found=db.queryForList("SELECT * FROM research_experiment WHERE id=?",id);
+        if(found.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND,"Expérience inconnue");
+        var exp=found.getFirst(); var parameters=params(exp); Instant at=now();
         var observations=db.queryForList("""
             SELECT o.*,s.bookmaker,s.outcome,s.price,s.observed_at,s.updated_at,e.starts_at,e.status,
                    hp.name AS home,ap.name AS away,
@@ -211,6 +234,8 @@ public class Observatory {
             else if(ci[1]<0) decision="RÉSULTAT DÉFAVORABLE";
             else decision="PREUVES INSUFFISANTES";
         }
+        if(parameters.path("descriptive_only").asBoolean()) decision=ended?"PILOTE TERMINÉ — AUCUNE VALIDATION":"PILOTE DESCRIPTIF — AUCUNE VALIDATION";
+        if(Boolean.FALSE.equals(exp.get("capture_enabled"))) decision="ARCHIVÉ — CAPTURE ARRÊTÉE";
         Map<String,Object> summary=new LinkedHashMap<>();
         summary.put("observations",observations.size()); summary.put("mature",mature); summary.put("closing_count",closed);
         summary.put("coverage",coverage); summary.put("days",clusters.size()); summary.put("settled",settled);
@@ -233,8 +258,14 @@ public class Observatory {
     public String todayText() {
         var data=dashboard(); @SuppressWarnings("unchecked") var events=(List<Map<String,Object>>)data.get("events");
         long real=events.stream().filter(e->!Boolean.TRUE.equals(e.get("demo"))).count();
-        return "Observatoire (aujourd'hui et 7 jours) : "+real+" matchs réels, "+(events.size()-real)+" DEMO.\n"
-            +String.join("\n",events.stream().filter(e->!Boolean.TRUE.equals(e.get("demo"))).limit(6)
-                .map(e->e.get("home")+" – "+e.get("away")+" : "+String.join(" ; ",(List<String>)e.get("reasons"))).toList());
+        StringBuilder text=new StringBuilder("🔎 ATLAS BET · OBSERVATION\n\nPAPER = simulation, sans argent engagé.\nHorizon : aujourd’hui et 7 jours · heure de Paris\n");
+        for(var c:competitions()) text.append("\n• ").append(c.get("name")).append(" : ").append(c.get("upcoming")).append(" match(s) à venir");
+        text.append("\n\nProchaines rencontres :");
+        events.stream().filter(e->!Boolean.TRUE.equals(e.get("demo")) && Rows.instant(e,"starts_at").isAfter(now())).limit(4).forEach(e->text.append("\n\n")
+            .append(e.get("home")).append(" – ").append(e.get("away")).append("\n")
+            .append(e.get("competition_name")).append(" · ").append(Rows.paris(Rows.instant(e,"starts_at")))
+            .append("\n").append(((List<?>)e.get("observations")).isEmpty()?"Aucun écart enregistré en simulation.":"Écart de cote enregistré en simulation ; avantage non prouvé."));
+        if(real==0) text.append("\nAucun match réel disponible sur cet horizon.");
+        return text.append("\n\nÀ retenir : aucune rentabilité démontrée. Un calendrier connu ne garantit pas des cotes fraîches.\n/sports : état des compétitions · /paper : simulations").toString();
     }
 }

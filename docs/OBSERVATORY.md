@@ -5,9 +5,42 @@ L'interface authentifiée est servie par le backend à `/`. Trois vues : Aujourd
 Un dossier s'ouvre pour chaque match, même sans recommandation. L'absence de signal
 est expliquée : cotes périmées, référence absente, modèle non validé, compositions
 non confirmées, risque bloqué. Les clés des fournisseurs ne sont jamais transmises
-au navigateur. Utiliser le tunnel SSH existant ; aucun port public n'est ajouté.
+au navigateur. Accès privé via Tailscale Serve sur le port HTTPS 8443 ; aucun port public ajouté.
 
-## Protocole prospectif fr-pinnacle-v1
+## Six compétitions — pilote prospectif v2
+
+Migration V7 : six expériences indépendantes `market-v2:<competition>`, créées au
+moment du déploiement pour 365 jours : Ligue 1, Premier League, Bundesliga, La Liga,
+Champions League et Europa League. Noms lisibles, filtres dans le calendrier et
+sélecteur d'expérience au laboratoire. Aucun agrégat ne mélange leurs résultats.
+
+Il s'agit d'un **pilote descriptif**, sans décision de validation statistique :
+examiner six compétitions augmente le risque de trouver un résultat positif par
+hasard. Les IC95 sont descriptifs, non corrigés pour comparaisons multiples. Le
+repère de 150 clôtures, 80 % de couverture et 20 jours n'est ni une garantie de
+puissance statistique ni un seuil de promotion. Aucun modèle n'est rendu VALIDATED.
+Le modèle Elo/Poisson de Ligue 1 n'est pas appliqué aux cinq autres compétitions.
+
+Seuil d'écart 3 %, fraîcheur 15 minutes, décalage maximal 5 minutes, même méthode
+Pinnacle que v1. Une observation par match, première entrée admissible **plus de
+15 minutes avant le départ** : une clôture ne peut pas servir de nouvelle entrée.
+Les résultats restent à 1 unité constante. Les paramètres sont figés dès la migration.
+
+Pour les coupes, le règlement porte sur 90 minutes, arrêts de jeu inclus, jamais
+sur la qualification. Les scores globaux The Odds API ne sont pas utilisés pour les
+coupes : le parseur exige `score.fulltime` d'API-Football avec statut FT, AET ou PEN.
+Sans clé, sans rapprochement exact des équipes ou sans score à 90 minutes, le
+résultat reste manquant et le ROI est calculé seulement sur les résultats connus.
+Ce manque de couverture est affiché ; il n'est pas transformé en victoire ou perte.
+L'actualité API-Football possède les six identifiants de compétition ; son cache
+sépare compétition et date. L'absence de blessés signalés n'est pas une preuve
+d'effectif complet. Le quota API-Football reste plafonné à 90 appels par jour.
+
+## Archive : protocole fr-pinnacle-v1
+
+La migration V7 arrête sa capture sans modifier ses paramètres, ses dates ni ses
+observations. L'archive reste consultable dans le sélecteur du laboratoire.
+
 
 Migration V6 : une expérience créée à la date de migration, terminée après 90 jours.
 Les paramètres sont enregistrés en base, sans endpoint pour les modifier. Le suivi
@@ -41,11 +74,15 @@ garantie d'exécution ni d'accès aux cotes sur le compte de l'utilisateur.
 
 ## Collecte et budget
 
-L'ordonnanceur passe toutes les 5 minutes. Le fournisseur ne contacte l'API que si
-son intervalle adaptatif est écoulé : 12 h sans match proche, 4 h dans les 24 h,
-1 h dans les 6 h, 15 min dans les 90 min, 5 min dans les 20 min avant le prochain
-match connu de la compétition. L'horaire est redécouvert au prochain relevé ; un
-match ajouté tardivement peut donc être manqué et reste une limite de couverture.
+L'ordonnanceur passe toutes les 5 minutes. Le calendrier `/events` gratuit est
+consulté toutes les 6 heures par compétition. Les matchs sans cote restent visibles.
+Une requête de cotes d'entrée est prévue dans l'heure avant chaque horaire de coup
+d'envoi, puis une requête de clôture dans les dix dernières minutes. Les horaires
+identiques sont regroupés ; les fenêtres consommées sont persistées pour résister
+aux redémarrages. Le premier cycle enregistre le calendrier ; les nouveaux matchs
+sont éligibles au cycle suivant. Une interruption peut faire manquer une fenêtre.
+Aucune collecte de cotes n'est lancée hors jour de match, y compris pour les coupes.
+La disponibilité d'une cote fraîche n'est jamais garantie par le seul succès HTTP.
 
 Requête explicite sur `betclic_fr,netbet_fr,pmu_fr,unibet_fr,winamax_fr,pinnacle` :
 selon la [documentation V4 du fournisseur](https://the-odds-api.com/liveapi/guides/v4/),
@@ -57,11 +94,19 @@ du pipeline placé sur ce bookmaker.
 (1 crédit par requête de cotes, 2 par requête de scores ; erreurs incluses).
 Le plancher de quota fournisseur reste prioritaire. Les réservations survivent aux
 redémarrages. Cette limite ne mesure pas la consommation d'autres applications
-utilisant la même clé. `ODDS_ADAPTIVE=false` rétablit l'intervalle fixe.
+utilisant la même clé. La quote-part est de `floor(400/6)=66` crédits par compétition,
+dont 20 protégés pour les scores (au plus 46 pour les cotes). Les crédits inutilisés
+ne sont pas transférés automatiquement : une compétition ne peut affamer les autres.
+Cette offre ne garantit pas une couverture exhaustive des six compétitions. Les
+statuts de collecte et les clôtures manquantes doivent être consultés avant d'interpréter
+les résultats. Les échecs réseau consomment la réservation locale par prudence.
+Le mode historique reste disponible avec `bet.odds.scheduled=false` ; alors seulement
+`ODDS_ADAPTIVE=false` rétablit l'intervalle fixe.
 
 ## Traçabilité et accès
 
-GET `/api/v1/observatory`, `/event?id=...`, `/laboratory`.
+GET `/api/v1/observatory`, `/event?id=...`, `/experiments`, `/laboratory?experiment=market-v2:soccer_spain_la_liga`.
+Sans paramètre, `/laboratory` conserve l’archive v1 pour compatibilité.
 POST `/api/v1/observatory/observations/{id}/feedback`, en JSON et avec l'en-tête
 `X-Atlas-Request: observatory`. Actions : AVAILABLE (cote obligatoire), UNAVAILABLE,
 IGNORED, motif de 3 à 500 caractères. Journal append-only, horodaté par le serveur.
@@ -103,3 +148,24 @@ de base (celle-ci pourrait perdre des déclarations postérieures à la sauvegar
 - Sauvegarde : `/srv/atlas-bet-backups/20261117T201636Z`, dump et manifeste vérifiés.
 - Identifiants et ports des sept conteneurs atlas-prod identiques avant/après.
 - Stack de smoke local arrêté après vérification ; aucune seconde instance du bot réel lancée.
+
+## Telegram v2
+
+Messages en blocs courts : identité du match, issue/cote, sens et limites du calcul,
+action proposée. Une démo annonce « MATCH FICTIF ». `/today` donne un aperçu des
+rencontres ; `/sports` distingue calendrier, cotes et données manquantes ; `/paper`
+et le bilan hebdomadaire séparent les six compétitions. Les longueurs des synthèses
+sont vérifiées sous la limite de 4096 caractères dans les tests avec les six compétitions.
+Aucune nouvelle notification de conseil de mise n'est créée par les observations.
+
+## Vérification v2 — 18 novembre 2026
+
+- 59 tests Java/PostgreSQL, 14 tests Python et 1 contrat FastAPI réussis.
+- Smoke Docker : 10 étapes réussies, dont redémarrage sans doublons.
+- Navigateur : six filtres, La Liga et Europa League au laboratoire, archive v1 ;
+  rendu bureau et mobile 390 px vérifié. Année ajoutée aux dates du pilote annuel.
+- Fournisseur réel : les six calendriers répondent ; 112 rencontres retournées lors
+  du contrôle préalable, coût déclaré de zéro crédit. Ce total n'est pas une preuve
+  de couverture des cotes ni de disponibilité pour parier.
+- API-Football non configurée : la limitation des résultats de coupe et de
+  l'actualité est affichée explicitement.

@@ -10,7 +10,8 @@ class ObservatoryApi {
     ObservatoryApi(Observatory observatory) { this.observatory=observatory; }
     @GetMapping Map<String,Object> dashboard() { return observatory.dashboard(); }
     @GetMapping("/event") Map<String,Object> event(@RequestParam String id) { return observatory.dossier(id); }
-    @GetMapping("/laboratory") Map<String,Object> laboratory() { return observatory.laboratory(); }
+    @GetMapping("/experiments") java.util.List<Map<String,Object>> experiments() { return observatory.experiments(); }
+    @GetMapping("/laboratory") Map<String,Object> laboratory(@RequestParam(defaultValue="fr-pinnacle-v1") String experiment) { return observatory.laboratory(experiment); }
     @PostMapping("/observations/{id}/feedback") Map<String,Object> feedback(@PathVariable long id,
         @RequestHeader("X-Atlas-Request") String origin,@RequestBody Observatory.Feedback request) {
         if(!"observatory".equals(origin)) throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST,"En-tête de requête invalide");

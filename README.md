@@ -27,8 +27,9 @@ API : http://127.0.0.1:18082/api/v1 — OpenAPI : `/v3/api-docs` (compte de dém
 ## Observatoire web
 
 http://127.0.0.1:18082/ avec la même authentification : Aujourd'hui, dossiers de match,
-journal des engagements et laboratoire PAPER Ligue 1. L'expérience prospective
-FR/Pinnacle dure 90 jours, sans promotion automatique ni nouvelle alerte de mise.
+journal des engagements et laboratoire PAPER par compétition : Ligue 1, Premier League,
+Bundesliga, La Liga, Champions League et Europa League. Six pilotes descriptifs de
+365 jours, sans promotion automatique ni nouvelle alerte de mise ; ancien protocole archivé.
 Les clôtures manquantes et raisons d'abstention sont visibles. La collecte est ciblée
 autour des matchs, plafonnée à 400 crédits réservés par mois.
 Voir [le protocole, les limites et l'accès VPS](docs/OBSERVATORY.md).

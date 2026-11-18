@@ -83,23 +83,20 @@ public class Reports {
     public String recommendationMessage(long recommendation) {
         var row = details(recommendation);
         BigDecimal price = Rows.decimal(row, "price");
-        BigDecimal implied = BigDecimal.ONE.divide(price, 4, RoundingMode.HALF_UP);
-        return (demo(row) ? "[DEMO / SYNTHÉTIQUE — match fictif]\n" : "")
-            + "Sélection #" + recommendation + " — " + SPORTS.get(row.get("sport")) + "\n"
-            + "Rencontre : " + row.get("home") + " – " + row.get("away") + "\n"
-            + "Compétition : " + row.get("competition") + "\n"
-            + "Date : " + Rows.paris(Rows.instant(row, "starts_at")) + " (Paris)\n"
-            + "Marché : " + row.get("rules") + "\n"
-            + "Issue : " + outcomeLabel(row, Rows.text(row, "outcome")) + "\n"
-            + "Bookmaker : " + row.get("bookmaker") + " — cote " + price.stripTrailingZeros().toPlainString()
-            + " relevée le " + Rows.paris(Rows.instant(row, "observed_at")) + "\n"
-            + "Probabilité du modèle : " + probability(row) + "\n"
-            + "EV théorique : " + percent(Rows.decimal(row, "ev")) + " (estimation, pas une garantie)\n"
-            + "Modèle : " + row.get("model") + " (" + row.get("model_status") + ")\n"
-            + "Raison : probabilité du modèle supérieure à la probabilité implicite de la cote ("
-            + percent(implied) + ").\n"
-            + "Expire le " + Rows.paris(Rows.instant(row, "expires_at")) + " ou dès que la cote passe sous le seuil.\n"
-            + WARNING;
+        return (demo(row) ? "🧪 DÉMO — MATCH FICTIF\nAucune mise réelle à effectuer.\n\n" : "🔎 ATLAS BET · Sélection à vérifier\n\n")
+            + "Sélection #" + recommendation + "\n"
+            + row.get("home") + " – " + row.get("away") + "\n"
+            + row.get("competition") + " · " + Rows.paris(Rows.instant(row,"starts_at")) + " (Paris)\n\n"
+            + "ISSUE OBSERVÉE\n" + outcomeLabel(row,Rows.text(row,"outcome")) + "\n"
+            + "Cote : " + price.stripTrailingZeros().toPlainString() + " chez " + row.get("bookmaker") + "\n"
+            + "Relevée le " + Rows.paris(Rows.instant(row,"observed_at")) + "\n"
+            + "Règle : " + row.get("rules") + "\n\n"
+            + "CE QUE DIT LE CALCUL\nProbabilité estimée : " + probability(row) + "\n"
+            + "Écart théorique : " + percent(Rows.decimal(row,"ev")) + ". Ce n’est ni un gain promis ni une chance de gagner.\n"
+            + "Modèle : " + row.get("model") + " · " + row.get("model_status") + "\n\n"
+            + "QUE FAIRE ?\nOuvrir « Voir analyse » pour comprendre les limites.\n"
+            + "La cote peut changer ; validité maximale : " + Rows.paris(Rows.instant(row,"expires_at")) + ".\n"
+            + "« J’ai parié » sert uniquement à déclarer un pari déjà effectué.\n\n" + WARNING;
     }
 
     public List<List<Button>> recommendationKeyboard(long recommendation) {
@@ -161,7 +158,7 @@ public class Reports {
     public String today() {
         var status = risk.status();
         var rows = db.queryForList(DETAILS + """
-             WHERE r.status='ACTIVE' AND o.expires_at > now() AND e.starts_at > now() ORDER BY e.starts_at LIMIT 10
+             WHERE r.status='ACTIVE' AND o.expires_at > now() AND e.starts_at > now() ORDER BY e.starts_at LIMIT 3
             """);
         StringBuilder text = new StringBuilder();
         if (Boolean.TRUE.equals(status.get("blocked"))) {
@@ -171,7 +168,7 @@ public class Reports {
         if (rows.isEmpty()) {
             return text.append(observatory.todayText()).append("\n\nAucune sélection vérifiée pour le moment. Zéro opportunité est un résultat normal.").toString();
         }
-        text.append("Sélections actives :");
+        text.append(observatory.todayText()).append("\n\nSélections actives (3 maximum ; DEMO = fictif) :");
         for (var row : rows) {
             text.append("\n#").append(row.get("id")).append(demo(row) ? " [DEMO]" : "").append(" ")
                 .append(row.get("home")).append(" – ").append(row.get("away")).append(", ")
@@ -184,22 +181,15 @@ public class Reports {
     }
 
     public String sports() {
-        var rows = db.queryForList("""
-            SELECT c.sport, c.name, count(e.id) FILTER (WHERE e.starts_at > now() AND e.status='SCHEDULED') AS upcoming
-            FROM competition c LEFT JOIN event e ON e.competition=c.id GROUP BY c.sport, c.name ORDER BY c.sport, c.name
-            """);
-        StringBuilder text = new StringBuilder("Sports couverts : football (1X2), tennis et basketball (vainqueur).");
-        for (var row : rows) {
-            text.append("\n- ").append(SPORTS.get(row.get("sport"))).append(" — ").append(row.get("name"))
-                .append(" : ").append(row.get("upcoming")).append(" match(s) à venir");
+        StringBuilder text=new StringBuilder("⚽ COMPÉTITIONS SUIVIES\n\nMarché : victoire / nul / défaite à 90 minutes.\nHors prolongations et tirs au but.\n");
+        for(var c:observatory.competitions()) {
+            text.append("\n").append(c.get("name")).append(" — ").append(c.get("upcoming")).append(" matchs sur 7 jours");
+            var state=(List<Map<String,Object>>)c.get("collection");
+            text.append("\n").append(state.isEmpty()?"Collecte en attente":state.getFirst().get("status")).append("\n");
         }
-        for (var provider : db.queryForList("SELECT id, status, quota_remaining FROM provider_health ORDER BY id")) {
-            text.append("\nFournisseur ").append(provider.get("id")).append(" : ").append(provider.get("status"));
-            if (provider.get("quota_remaining") != null) {
-                text.append(" (crédits restants : ").append(provider.get("quota_remaining")).append(")");
-            }
-        }
-        return text.toString();
+        return text.append("\nPAPER uniquement : comparaison de cotes, pas de conseil de mise.\n")
+            .append(news.configured()?"Actualité : source configurée ; couverture à vérifier par match.":"Actualité et scores à 90 min des coupes : API-Football non configurée. Résultats concernés laissés en attente.")
+            .append("\nTennis / basketball : démonstration seulement.").toString();
     }
 
     public Map<String, Object> performanceData() {
@@ -292,20 +282,10 @@ public class Reports {
 
     /** Synthèse hebdomadaire envoyée le lundi matin. */
     public String weekly() {
-        var quota = db.queryForList("SELECT quota_remaining FROM provider_health WHERE id='odds-api'");
-        var week = db.queryForMap("""
-            SELECT count(*) FILTER (WHERE e.source<>'DEMO') AS real_predicted,
-                   count(*) FILTER (WHERE e.source='DEMO') AS demo_predicted
-            FROM (SELECT DISTINCT f.event_id FROM feature_snapshot f WHERE f.observed_at > now() - interval '7 days') p
-            JOIN event e ON e.id=p.event_id
-            """);
-        return "Synthèse de la semaine\nMatchs réels analysés : " + week.get("real_predicted")
-            + " ; matchs DEMO : " + week.get("demo_predicted") + "\n\n" + performance() + "\n\n" + budget()
-            + (quota.isEmpty() || quota.getFirst().get("quota_remaining") == null ? ""
-                : "\nCrédits The Odds API restants : " + quota.getFirst().get("quota_remaining"))
-            + "\n\nStatut des modèles : " + String.join(", ", db.queryForList(
-                "SELECT id || ' ' || status FROM model_version ORDER BY sport, id", String.class))
-            + "\nSans modèle VALIDATED, aucune suggestion réelle n'est envoyée.";
+        return "📊 BILAN HEBDOMADAIRE\n\n" + paper() + "\n\n"
+            + "SITUATION DU COMPTE\n" + budget() + "\n\n"
+            + "Les simulations ne prouvent pas un avantage rentable.\n"
+            + "/today : prochaines rencontres\n/sports : couverture et données manquantes\n/performance : détail des modèles";
     }
 
     public String budget() {
@@ -353,29 +333,29 @@ public class Reports {
     }
 
     public String paper() {
-        var row = db.queryForMap("""
-            SELECT count(*) FILTER (WHERE s.id IS NULL) AS open, count(s.id) AS settled,
-                   coalesce(sum(b.stake) FILTER (WHERE s.id IS NOT NULL),0) AS stake,
-                   coalesce(sum(s.payout-b.stake),0) AS net
-            FROM paper_bet b LEFT JOIN bet_settlement s ON s.paper_id=b.id
-            """);
-        BigDecimal stake = Rows.decimal(row, "stake");
-        BigDecimal net = Rows.decimal(row, "net");
-        return "Portefeuille virtuel (aucun argent réel) : " + row.get("open") + " ouvert(s), " + row.get("settled")
-            + " réglé(s)\nMises réglées : " + Rows.euros(stake) + "\nRésultat net : " + Rows.euros(net)
-            + "\nROI : " + (stake.signum() == 0 ? "—" : percent(net.divide(stake, 4, RoundingMode.HALF_UP)));
+        StringBuilder text=new StringBuilder("🧪 OBSERVATIONS PAPER\nSimulation à 1 unité par match, sans argent engagé.\n");
+        for(var c:Competitions.ALL) {
+            var data=observatory.laboratory("market-v2:"+c.id());
+            var summary=(Map<String,Object>)data.get("summary");
+            text.append("\n").append(c.name()).append("\n")
+                .append(summary.get("observations")).append(" observations · ").append(summary.get("settled")).append(" résultats connus\n")
+                .append("Clôtures mesurées : ").append(summary.get("closing_count")).append(" / ").append(summary.get("mature")).append(" matchs commencés\n")
+                .append("Rendement simulé : ").append(summary.get("roi")==null?"non calculable":percent(BigDecimal.valueOf(((Number)summary.get("roi")).doubleValue()))).append("\n");
+        }
+        return text.append("\nChaque compétition est évaluée séparément. Les résultats manquants ne comptent pas comme pertes.\n")
+            .append("Un rendement positif sur peu de matchs ne permet pas de conclure. Aucun modèle n’est validé par ce pilote.").toString();
     }
 
     public static String help() {
         return """
             Commandes :
-            /today — sélections vérifiées actives
+            /today — prochaines rencontres et sélections actives
             /sports — sports et compétitions couverts
             /analysis <numéro> — détail d'une sélection
             /performance — prédictions, simulations et paris réels séparés
             /budget — pertes, exposition et plafond
             /history — sélections passées
-            /paper — portefeuille virtuel
+            /paper — simulations par compétition
             /pause — pause d'au moins 24 h
             /resume — reprise après la pause
             /annuler — abandonner une saisie en cours
