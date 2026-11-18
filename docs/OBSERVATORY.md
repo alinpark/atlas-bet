@@ -186,3 +186,48 @@ ne signifie pas que la compétition est désactivée. Cotes attendues aux fenêt
 prévues avant les matchs ; aucune couverture fraîche complète prétendue au déploiement.
 Budget local inchangé à 2 crédits réservés en novembre après les calendriers gratuits.
 Stack de smoke local arrêtée ; aucun message de test envoyé au bot Telegram réel.
+
+## Simulateur de capital — novembre 2026
+
+Onglet Simulation, API authentifiée en lecture seule :
+`GET /api/v1/observatory/simulation?source=DELIVERED&from=2026-11-01&to=2026-11-18&capital=1000&fixed=10&percent=1`.
+Sources exclusives : DELIVERED (alertes réelles dont la livraison Telegram est enregistrée),
+RESEARCH (observations PAPER v2), DEMO (alertes fictives livrées). Filtre optionnel
+`competition`. Une recommandation expirée aujourd'hui n'est pas supprimée du passé.
+L'absence de propositions réelles produit un état vide, jamais un remplacement par la démo.
+
+Deux replays indépendants : montant fixe et pourcentage du capital total connu à
+l'entrée. Le capital et les plafonds actuels limitent les mises ; une mise est réduite
+ou écartée si nécessaire. Plafonds mensuels/journaliers en heure de Paris ; gains
+sans recharge du budget de pertes, exposition ouverte réservée. Les engagements
+manuels existants et les pauses historiques ne sont pas reconstitués : c'est un
+compte hypothétique autonome, pas une reconstruction du compte bancaire de l'utilisateur.
+
+Les entrées sont datées à la première livraison (ou à la capture PAPER). Cote
+historique de détection, fraîche à cette entrée pour les données réelles ; pas de
+cote actuelle substituée. Une cote non exécutable sur le compte reste une limite.
+Aucune mise conseillée historique n'est inventée : les montants sont calculés selon
+les scénarios choisis. Aucun pari réel ni nouvelle observation n'est écrit.
+
+Les résultats sont utilisés uniquement lorsqu'ils ont été enregistrés, avant la
+fin de période. Le capital reste immobilisé jusque-là. Aucun score après la fin de
+période n'est utilisé. Un résultat manquant reste ouvert, une annulation rembourse
+la mise. Retours bruts = montants reversés, mises rendues incluses ; bénéfice net =
+retours moins mises réglées. ROI calculé sur mises réglées seulement (annulations
+incluses, à rendement nul). Capital total = disponible + coût des mises ouvertes.
+La courbe et la baisse maximale portent sur ce capital comptable, sans mark-to-market.
+Le résultat si tous les paris ouverts perdaient est affiché séparément.
+
+Période filtrée sur la proposition (pas la date de match), maximum cinq ans et
+20 000 entrées ; les périodes dépassant cette limite sont refusées, jamais tronquées.
+Pour une même rencontre, une seule mise est retenue. Les propositions reçues après
+le départ ou avec une cote périmée sont listées comme écartées.
+
+### Validation du simulateur
+
+69 tests Java/PostgreSQL, 14 tests Python et 1 test FastAPI réussis ; smoke Docker
+10/10. Contrôle navigateur : chargement initial, état vide réel, simulation DEMO
+à mise fixe et à 2 %, changement de scénario, filtre expérimental La Liga et
+rendu mobile sans débordement horizontal. Correction de l'ordre de chargement des
+scripts vérifiée après reconstruction de l'image. Aucun message au bot réel ni
+engagement financier créé pendant les vérifications.

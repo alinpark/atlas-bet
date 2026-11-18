@@ -66,3 +66,12 @@ vos limites ANJ sur 7 jours chez chaque opérateur. Voir [docs/RISK_POLICY.md](d
 (simulation DEMO en SQLite) et `evaluate | backtest <fichier.json>` (métriques sur un
 historique horodaté, ex. `fixtures/sports/backtest_demo.json`). La CLI ne gère aucun
 pari réel.
+
+### Simulation « Si j’avais suivi Atlas Bet »
+
+L’onglet **Simulation** compare une mise fixe et un pourcentage du capital sur les
+alertes réelles livrées, les observations PAPER ou la démo, sans les mélanger.
+Capital, période et compétition sont réglables. Bénéfice net, retours bruts,
+exposition, rendement, baisse maximale et détail de chaque pari restent distincts.
+Les mises sont hypothétiques et respectent les plafonds actuels ; les résultats
+inconnus restent en attente. Aucun pari réel n’est placé.
