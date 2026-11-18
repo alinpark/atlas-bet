@@ -169,3 +169,20 @@ Aucune nouvelle notification de conseil de mise n'est créée par les observatio
   de couverture des cotes ni de disponibilité pour parier.
 - API-Football non configurée : la limitation des résultats de coupe et de
   l'actualité est affichée explicitement.
+
+### Contrôle après déploiement v2
+
+Code applicatif `0450452` déployé ; migration V7 et sept expériences vérifiées
+(six pilotes actifs, une archive). Backend, moteur et PostgreSQL sains.
+SHA-256 du jar local identique au jar du VPS :
+`85830ec2df17216c28798ca54a1c7376551c55dad5d619a472ffecabf800e816`.
+Sauvegarde préalable : `/srv/atlas-bet-backups/20261118T211706Z`.
+Conteneurs et ports atlas-prod inchangés ; configuration Tailscale inchangée.
+Santé UP via HTTPS Tailscale :8443 ; observatoire sans authentification : HTTP 401.
+Calendriers ingérés en production : Ligue 1 18, Premier League 20, Bundesliga 18,
+La Liga 20, Champions League 18, Europa League 18. Sur les sept prochains jours :
+9, 10, 9, 10, 18 et 0 respectivement. L'absence d'Europa League sur cet horizon
+ne signifie pas que la compétition est désactivée. Cotes attendues aux fenêtres
+prévues avant les matchs ; aucune couverture fraîche complète prétendue au déploiement.
+Budget local inchangé à 2 crédits réservés en novembre après les calendriers gratuits.
+Stack de smoke local arrêtée ; aucun message de test envoyé au bot Telegram réel.
