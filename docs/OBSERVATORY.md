@@ -231,3 +231,12 @@ le départ ou avec une cote périmée sont listées comme écartées.
 rendu mobile sans débordement horizontal. Correction de l'ordre de chargement des
 scripts vérifiée après reconstruction de l'image. Aucun message au bot réel ni
 engagement financier créé pendant les vérifications.
+
+Déploiement du simulateur : code `5f016d1`, sauvegarde préalable
+`/srv/atlas-bet-backups/20261118T214722Z`. Trois services sains, conteneurs atlas-prod
+et Tailscale inchangés. Jar local/VPS identique (SHA-256
+`3de06719c543438f39c000612c798f756696735be0f0a32aad324633eb89b5b3`).
+API vérifiée sur les trois sources, conservation du capital et refus HTTP 401 sans
+authentification. Écran Simulation vérifié via HTTPS Tailscale. Au contrôle :
+aucune alerte réelle ni observation v2 à simuler ; six alertes DEMO, toutes ouvertes.
+L'interface expose cet état sans présenter les chiffres fictifs comme performance réelle.
