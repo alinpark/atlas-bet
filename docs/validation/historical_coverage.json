@@ -1,0 +1,383 @@
+{
+  "experiment": "hist-fr-pinnacle-v1",
+  "generated_at": "2026-11-21T21:17:51.268634+00:00",
+  "dates_fixed_before_fetch": [
+    "2022-10-15",
+    "2023-03-11",
+    "2023-10-21",
+    "2024-03-09",
+    "2024-10-19",
+    "2025-03-08",
+    "2025-10-18",
+    "2026-03-14"
+  ],
+  "sport": "soccer_france_ligue_one",
+  "followup_dates_after_presence_only": [
+    "2024-12-14",
+    "2025-01-18",
+    "2025-05-10",
+    "2025-08-30",
+    "2026-10-17"
+  ],
+  "reserved_credits": 39,
+  "provider_charged_credits": 39,
+  "provider_remaining": 427,
+  "cap": 40,
+  "reserve_floor": 420,
+  "rows": [
+    {
+      "date": "2022-10-15",
+      "event_id": "228816612691fdd11462ae8d144dafb6",
+      "home": "Lorient",
+      "away": "Stade de Reims",
+      "known_start": "2022-10-15T15:00:00Z",
+      "queried_at": "2022-10-15T14:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2022-10-15",
+      "event_id": "f2f102f242d1d4ca915f7ddb886982c5",
+      "home": "RC Lens",
+      "away": "Montpellier",
+      "known_start": "2022-10-15T19:00:00Z",
+      "queried_at": "2022-10-15T18:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2023-03-11",
+      "event_id": "acfd28a63a4388e97868743f55850dbd",
+      "home": "Auxerre",
+      "away": "Rennes",
+      "known_start": "2023-03-11T16:00:00Z",
+      "queried_at": "2023-03-11T15:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2023-03-11",
+      "event_id": "df1fc3f02b77089aa306183360acac28",
+      "home": "Brest",
+      "away": "Paris Saint Germain",
+      "known_start": "2023-03-11T20:00:00Z",
+      "queried_at": "2023-03-11T19:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2023-10-21",
+      "event_id": "9670a7a9d0321ddd4bc3b1192ab848e2",
+      "home": "Paris Saint Germain",
+      "away": "Strasbourg",
+      "known_start": "2023-10-21T15:00:00Z",
+      "queried_at": "2023-10-21T14:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2023-10-21",
+      "event_id": "f9a24d10e6801caf4cec2414b0fb5688",
+      "home": "Nice",
+      "away": "Marseille",
+      "known_start": "2023-10-21T19:00:00Z",
+      "queried_at": "2023-10-21T18:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2024-03-09",
+      "event_id": "e3e223ec9ffb2d296afdfac633737780",
+      "home": "Lorient",
+      "away": "Lyon",
+      "known_start": "2024-03-09T16:00:00Z",
+      "queried_at": "2024-03-09T15:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2024-03-09",
+      "event_id": "db18ab70ce4d29221c5e67b7d535bec4",
+      "home": "RC Lens",
+      "away": "Brest",
+      "known_start": "2024-03-09T20:00:00Z",
+      "queried_at": "2024-03-09T19:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2024-10-19",
+      "event_id": "0a746db97097f372dfaf8ae047544e0e",
+      "home": "Brest",
+      "away": "Rennes",
+      "known_start": "2024-10-19T15:00:00Z",
+      "queried_at": "2024-10-19T14:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2024-10-19",
+      "event_id": "c9929778acc060b3291a363d5ee75d1a",
+      "home": "Saint Etienne",
+      "away": "RC Lens",
+      "known_start": "2024-10-19T17:00:00Z",
+      "queried_at": "2024-10-19T16:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-03-08",
+      "event_id": "473b0486bd312000b48f531c6e7b2502",
+      "home": "Rennes",
+      "away": "Paris Saint Germain",
+      "known_start": "2025-03-08T16:00:00Z",
+      "queried_at": "2025-03-08T15:00:00+00:00",
+      "h2h_present": [
+        "pinnacle",
+        "winamax_fr"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-03-08",
+      "event_id": "d155a30e07e1ad90d8d05c21340a00eb",
+      "home": "Lille",
+      "away": "Montpellier",
+      "known_start": "2025-03-08T18:00:00Z",
+      "queried_at": "2025-03-08T17:00:00+00:00",
+      "h2h_present": [
+        "pinnacle",
+        "winamax_fr"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-10-18",
+      "event_id": "3f84e24daba642073470912d950197f9",
+      "home": "Nice",
+      "away": "Lyon",
+      "known_start": "2025-10-18T15:00:00Z",
+      "queried_at": "2025-10-18T14:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "pinnacle",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2025-10-18",
+      "event_id": "bfa0744bdbe66de6d4d3bca67686e071",
+      "home": "Angers",
+      "away": "AS Monaco",
+      "known_start": "2025-10-18T17:00:00Z",
+      "queried_at": "2025-10-18T16:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "pinnacle",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2026-03-14",
+      "event_id": "f70de2c7a55e65c26f8e63a12c76e13d",
+      "home": "Lorient",
+      "away": "RC Lens",
+      "known_start": "2026-03-14T16:00:00Z",
+      "queried_at": "2026-03-14T15:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "netbet_fr",
+        "pinnacle",
+        "pmu_fr",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2026-03-14",
+      "event_id": "ce0e2c9c04d2c2ddd9a61e48d486cce9",
+      "home": "Angers",
+      "away": "Nice",
+      "known_start": "2026-03-14T18:00:00Z",
+      "queried_at": "2026-03-14T17:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "netbet_fr",
+        "pinnacle",
+        "pmu_fr",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2024-12-14",
+      "event_id": "7e7b1c4dd762961aa8a3ff983ecc2190",
+      "home": "Marseille",
+      "away": "Lille",
+      "known_start": "2024-12-14T16:00:00Z",
+      "queried_at": "2024-12-14T15:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2024-12-14",
+      "event_id": "789fb9b1a514450351e439f30e02f438",
+      "home": "Auxerre",
+      "away": "RC Lens",
+      "known_start": "2024-12-14T18:00:00Z",
+      "queried_at": "2024-12-14T17:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-01-18",
+      "event_id": "ac34dd22b0ebc8b91286ef0f38a57108",
+      "home": "RC Lens",
+      "away": "Paris Saint Germain",
+      "known_start": "2025-01-18T16:00:00Z",
+      "queried_at": "2025-01-18T15:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-01-18",
+      "event_id": "562204d18bec4c03f9e477ddd2011e86",
+      "home": "Rennes",
+      "away": "Brest",
+      "known_start": "2025-01-18T18:00:00Z",
+      "queried_at": "2025-01-18T17:00:00+00:00",
+      "h2h_present": [
+        "pinnacle"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-05-10",
+      "event_id": "3987d244af96778c30b6cc8995ead424",
+      "home": "Montpellier",
+      "away": "Paris Saint Germain",
+      "known_start": "2025-05-10T19:00:00Z",
+      "queried_at": "2025-05-10T18:00:00+00:00",
+      "h2h_present": [
+        "pinnacle",
+        "winamax_fr"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-05-10",
+      "event_id": "3d30f9dd89e4a00496876f179a93a576",
+      "home": "Le Havre",
+      "away": "Marseille",
+      "known_start": "2025-05-10T19:00:00Z",
+      "queried_at": "2025-05-10T18:00:00+00:00",
+      "h2h_present": [
+        "pinnacle",
+        "winamax_fr"
+      ],
+      "candidate": false
+    },
+    {
+      "date": "2025-08-30",
+      "event_id": "1724dab1e9a94e13470e0dd63a8f59e2",
+      "home": "Lorient",
+      "away": "Lille",
+      "known_start": "2025-08-30T15:00:00Z",
+      "queried_at": "2025-08-30T14:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "pinnacle",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2025-08-30",
+      "event_id": "331c64d305893ca5381aee32c60aac26",
+      "home": "Nantes",
+      "away": "Auxerre",
+      "known_start": "2025-08-30T17:00:00Z",
+      "queried_at": "2025-08-30T16:00:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "pinnacle",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2026-10-17",
+      "event_id": "f3034246520a2ee4ff0ac0d5074966f8",
+      "home": "Strasbourg",
+      "away": "Paris Saint Germain",
+      "known_start": "2026-10-17T15:15:00Z",
+      "queried_at": "2026-10-17T14:15:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "netbet_fr",
+        "pinnacle",
+        "pmu_fr",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    },
+    {
+      "date": "2026-10-17",
+      "event_id": "ad25a350c89b64715e15c59cde5653d3",
+      "home": "Lille",
+      "away": "Brest",
+      "known_start": "2026-10-17T18:45:00Z",
+      "queried_at": "2026-10-17T17:45:00+00:00",
+      "h2h_present": [
+        "betclic_fr",
+        "netbet_fr",
+        "pinnacle",
+        "pmu_fr",
+        "unibet_fr",
+        "winamax_fr"
+      ],
+      "candidate": true
+    }
+  ],
+  "error": null,
+  "decision": "DISCOVERY_ONLY_REVIEW_REQUIRED",
+  "limitations": [
+    "Presence only; no proof of freshness or full-season coverage",
+    "Stratified small sample; no ROI or CLV evaluated"
+  ]
+}

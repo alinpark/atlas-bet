@@ -1,0 +1,8 @@
+{
+  "scope": "offline rules only; historical importer and live v3 not activated",
+  "normalization": "UTF-8 bytes, CRLF converted to LF",
+  "sha256": {
+    "docs/protocol/hist-fr-pinnacle-v1.md": "10f5918969c9699d72e73d4f4be2f2c22220ae25d5b305f75dea2abfa12a46a6",
+    "research/protocol.py": "0e08821a41663e17e86a6737a1ad9a47d2304f33f5a27f9704e7e31c0dc7f93b"
+  }
+}

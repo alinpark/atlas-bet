@@ -1,5 +1,28 @@
 # Observatoire Atlas Bet
 
+## Notifications PAPER et recherche historique — 21 novembre 2026
+
+Les jours où des matchs réels sont au calendrier, Telegram reçoit un point après
+9 h et un bilan après 23 h (Paris), une fois par date et phase. Après une panne,
+le point du jour peut partir au redémarrage ; les bulletins de la veille ne sont
+pas rattrapés. Une observation v2 capturée depuis moins de cinq minutes peut être
+notifiée, explicitement en SIMULATION, avec cote horodatée et exemple fictif à
+10 euros distinguant retour brut et profit net. Aucun pari ni recommandation
+réelle créé. Les limites/pauses bloquent les notifications d'observations.
+
+Expiration vérifiée au moment d'envoyer : au plus cinq minutes après capture,
+quinze minutes après mise à jour de la cote et avant le début du match. Un match
+annulé ou déjà commencé ne produit pas d'observation envoyée. Déduplication
+persistante par observation et destinataire. Les récapitulatifs informatifs
+restent possibles pendant une pause. Un bilan sans observation le dit explicitement.
+
+Audit historique : 39 crédits utilisés, quota 427 après audit. Achat non justifié
+pour le protocole prévu (contre-revue Claude). Voir
+[le rapport](validation/HISTORICAL_COVERAGE_REVIEW.md) et
+[le protocole](protocol/hist-fr-pinnacle-v1.md). Le module de règles hors ligne est
+testé ; l'import payant et l'expérience v3 ne sont pas activés. Le simulateur
+explique cette limite, sans inventer une courbe historique.
+
 L'interface authentifiée est servie par le backend à `/`. Trois vues : Aujourd'hui
 (date de Paris, filtre 7 jours et démo explicite), Laboratoire et Journal & risque.
 Un dossier s'ouvre pour chaque match, même sans recommandation. L'absence de signal

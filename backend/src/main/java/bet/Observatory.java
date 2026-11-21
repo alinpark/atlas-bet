@@ -258,14 +258,14 @@ public class Observatory {
     public String todayText() {
         var data=dashboard(); @SuppressWarnings("unchecked") var events=(List<Map<String,Object>>)data.get("events");
         long real=events.stream().filter(e->!Boolean.TRUE.equals(e.get("demo"))).count();
-        StringBuilder text=new StringBuilder("🔎 ATLAS BET · OBSERVATION\n\nPAPER = simulation, sans argent engagé.\nHorizon : aujourd’hui et 7 jours · heure de Paris\n");
+        StringBuilder text=new StringBuilder("⚽ MATCHS SUIVIS PAR ATLAS\n\nTests en simulation : aucun argent engagé.\nAujourd’hui et les 7 prochains jours · heure de Paris\n");
         for(var c:competitions()) text.append("\n• ").append(c.get("name")).append(" : ").append(c.get("upcoming")).append(" match(s) à venir");
         text.append("\n\nProchaines rencontres :");
         events.stream().filter(e->!Boolean.TRUE.equals(e.get("demo")) && Rows.instant(e,"starts_at").isAfter(now())).limit(4).forEach(e->text.append("\n\n")
             .append(e.get("home")).append(" – ").append(e.get("away")).append("\n")
             .append(e.get("competition_name")).append(" · ").append(Rows.paris(Rows.instant(e,"starts_at")))
-            .append("\n").append(((List<?>)e.get("observations")).isEmpty()?"Aucun écart enregistré en simulation.":"Écart de cote enregistré en simulation ; avantage non prouvé."));
+            .append("\n").append(((List<?>)e.get("observations")).isEmpty()?"Aucun pari test pour le moment.":"Un pari fictif est suivi pour ce match."));
         if(real==0) text.append("\nAucun match réel disponible sur cet horizon.");
-        return text.append("\n\nÀ retenir : aucune rentabilité démontrée. Un calendrier connu ne garantit pas des cotes fraîches.\n/sports : état des compétitions · /paper : simulations").toString();
+        return text.append("\n\nAtlas compare les cotes près du coup d’envoi. Il n’a pas encore prouvé qu’il pouvait te faire gagner.\n/paper : gains et pertes fictifs · /sports : compétitions suivies").toString();
     }
 }

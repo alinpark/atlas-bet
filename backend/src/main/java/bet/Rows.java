@@ -58,6 +58,6 @@ final class Rows {
     }
 
     static String euros(BigDecimal amount) {
-        return amount == null ? "?" : String.format(Locale.FRENCH, "%.2f EUR", amount);
+        return amount == null ? "?" : String.format(Locale.FRENCH, "%.2f €", amount);
     }
 }

@@ -37,9 +37,19 @@ public class TelegramOutbox {
     }
 
     public void enqueue(String key, Long recommendation, String text, List<List<Button>> keyboard) {
+        enqueueUntil(key, recommendation, text, keyboard, null);
+    }
+
+    /** Les observations PAPER et bulletins périmés ne doivent jamais être rejoués après une panne. */
+    public void enqueueUntil(String key, Long recommendation, String text, List<List<Button>> keyboard,
+                             java.time.Instant expiresAt) {
         String payload;
         try {
-            payload = json.writeValueAsString(Map.of("text", text, "keyboard", keyboard));
+            var content = new java.util.LinkedHashMap<String, Object>();
+            content.put("text", text);
+            content.put("keyboard", keyboard);
+            if (expiresAt != null) content.put("expires_at", expiresAt.toString());
+            payload = json.writeValueAsString(content);
         } catch (Exception error) {
             throw new IllegalStateException("Message Telegram non sérialisable", error);
         }
@@ -107,6 +117,26 @@ public class TelegramOutbox {
      */
     private String cancelReason(Map<String, Object> row, Map<String, Object> status) {
         String key = Rows.text(row, "idempotency_key");
+        if (key.startsWith("paper:")) {
+            try {
+                var expiry = java.time.Instant.parse(json.readTree(Rows.text(row, "payload")).path("expires_at").asText());
+                var now = db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant();
+                if (!expiry.isAfter(now)) return "bulletin PAPER périmé";
+                if (key.startsWith("paper:obs:") && Boolean.TRUE.equals(status.get("blocked"))) {
+                    return "observation PAPER annulée pendant un blocage de risque";
+                }
+                if (key.startsWith("paper:obs:")) {
+                    long observation = Long.parseLong(key.split(":")[2]);
+                    Boolean valid = db.queryForObject("""
+                        SELECT EXISTS (SELECT 1 FROM research_observation o JOIN event e ON e.id=o.event_id
+                          WHERE o.id=? AND e.source='odds-api' AND e.status='SCHEDULED' AND e.starts_at>now())
+                        """, Boolean.class, observation);
+                    if (!Boolean.TRUE.equals(valid)) return "match PAPER annulé, commencé ou introuvable";
+                }
+            } catch (Exception error) {
+                return "expiration PAPER invalide";
+            }
+        }
         Object recommendation = row.get("recommendation_id");
         if (key.startsWith("rec:")) {
             if (Boolean.TRUE.equals(status.get("blocked"))) {

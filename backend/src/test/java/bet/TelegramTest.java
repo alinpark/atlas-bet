@@ -91,7 +91,7 @@ class TelegramTest extends PostgresTest {
         // Le registre est unique : /budget voit le pari saisi par Telegram.
         assertEquals(0, new BigDecimal("25").compareTo(Rows.decimal(risk.status(), "exposure")));
         bot.handle(text(1000, "private", "/budget"));
-        assertTrue(last().contains("Exposition ouverte : 25,00 EUR"), last());
+        assertTrue(last().contains("Mises encore en jeu : 25,00 €"), last());
     }
 
     /** Conception (revue Codex) : un pari déjà placé au-delà des limites est enregistré et signalé. */

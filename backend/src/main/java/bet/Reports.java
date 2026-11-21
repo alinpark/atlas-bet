@@ -166,7 +166,7 @@ public class Reports {
                 .append(". Aucune nouvelle proposition de mise.\n\n");
         }
         if (rows.isEmpty()) {
-            return text.append(observatory.todayText()).append("\n\nAucune sélection vérifiée pour le moment. Zéro opportunité est un résultat normal.").toString();
+            return text.append(observatory.todayText()).append("\n\nAucun pari réel recommandé. Rien à miser sur la base de ces tests.").toString();
         }
         text.append(observatory.todayText()).append("\n\nSélections actives (3 maximum ; DEMO = fictif) :");
         for (var row : rows) {
@@ -283,18 +283,18 @@ public class Reports {
     /** Synthèse hebdomadaire envoyée le lundi matin. */
     public String weekly() {
         return "📊 BILAN HEBDOMADAIRE\n\n" + paper() + "\n\n"
-            + "SITUATION DU COMPTE\n" + budget() + "\n\n"
-            + "Les simulations ne prouvent pas un avantage rentable.\n"
+            + "TES PARIS DÉCLARÉS ET TES LIMITES\n" + budget() + "\n\n"
+            + "Les gains fictifs ne garantissent pas de gains futurs.\n"
             + "/today : prochaines rencontres\n/sports : couverture et données manquantes\n/performance : détail des modèles";
     }
 
     public String budget() {
         var status = risk.status();
         String text = "Pertes réalisées ce mois : " + Rows.euros(Rows.decimal(status, "monthly_loss"))
-            + "\nExposition ouverte : " + Rows.euros(Rows.decimal(status, "exposure"))
+            + "\nMises encore en jeu : " + Rows.euros(Rows.decimal(status, "exposure"))
             + "\nPlafond mensuel : " + Rows.euros(Rows.decimal(status, "cap"))
-            + "\nCapacité de perte restante : " + Rows.euros(Rows.decimal(status, "remaining"))
-            + "\nMise maximale unitaire : " + Rows.euros(Rows.decimal(status, "max_stake"))
+            + "\nMontant encore autorisé par tes limites : " + Rows.euros(Rows.decimal(status, "remaining"))
+            + "\nMaximum par pari : " + Rows.euros(Rows.decimal(status, "max_stake"))
             + "\nRemise à zéro : " + Rows.paris(Rows.instant(status, "reset_at")) + " (Paris)";
         if (Boolean.TRUE.equals(status.get("paused"))) {
             text += "\nPause active, reprise possible après le " + Rows.paris(Rows.instant(status, "resume_not_before"));
@@ -333,17 +333,35 @@ public class Reports {
     }
 
     public String paper() {
-        StringBuilder text=new StringBuilder("🧪 OBSERVATIONS PAPER\nSimulation à 1 unité par match, sans argent engagé.\n");
+        StringBuilder text=new StringBuilder("🧪 RÉSULTATS DES PARIS TESTS\nDepuis le début du suivi, sans argent engagé.\nExemple : 10 € fictifs par match, sans réinvestir les gains.\n");
+        var now=db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant();
         for(var c:Competitions.ALL) {
             var data=observatory.laboratory("market-v2:"+c.id());
             var summary=(Map<String,Object>)data.get("summary");
-            text.append("\n").append(c.name()).append("\n")
-                .append(summary.get("observations")).append(" observations · ").append(summary.get("settled")).append(" résultats connus\n")
-                .append("Clôtures mesurées : ").append(summary.get("closing_count")).append(" / ").append(summary.get("mature")).append(" matchs commencés\n")
-                .append("Rendement simulé : ").append(summary.get("roi")==null?"non calculable":percent(BigDecimal.valueOf(((Number)summary.get("roi")).doubleValue()))).append("\n");
+            int total=((Number)summary.get("observations")).intValue();
+            int settled=((Number)summary.get("settled")).intValue();
+            var observations=(List<Map<String,Object>>)data.get("observations");
+            long upcoming=observations.stream().filter(o->"SCHEDULED".equals(o.get("status"))
+                && Rows.instant(o,"starts_at").isAfter(now)).count();
+            long cancelled=observations.stream().filter(o->"CANCELLED".equals(o.get("status"))).count();
+            text.append("\n").append(c.name()).append(" : ");
+            if(total==0) { text.append("aucun pari test.\n"); continue; }
+            text.append(total).append(" pari(s) test\n").append(settled).append(" résultat(s) connu(s) · ")
+                .append(upcoming).append(" à venir\n").append(total-settled-upcoming-cancelled)
+                .append(" résultat(s) encore indisponible(s)");
+            if(cancelled>0) text.append(" · ").append(cancelled).append(" match(s) annulé(s)");
+            text.append("\n");
+            if(settled==0) text.append("Gain ou perte : en attente.\n");
+            else {
+                BigDecimal net=BigDecimal.valueOf(((Number)summary.get("roi")).doubleValue())
+                    .multiply(BigDecimal.valueOf(settled*10L));
+                text.append(net.signum()<0?"Perte fictive : ":"Bénéfice fictif : ").append(Rows.euros(net.abs()))
+                    .append(" pour ").append(Rows.euros(BigDecimal.valueOf(settled*10L)))
+                    .append(" de mises fictives.\n");
+            }
         }
-        return text.append("\nChaque compétition est évaluée séparément. Les résultats manquants ne comptent pas comme pertes.\n")
-            .append("Un rendement positif sur peu de matchs ne permet pas de conclure. Aucun modèle n’est validé par ce pilote.").toString();
+        return text.append("\nUn résultat manquant n’est ni un gain ni une perte.\n")
+            .append("Ces tests ne prouvent pas qu’Atlas te ferait gagner de l’argent.\n/today : voir les matchs").toString();
     }
 
     public static String help() {
