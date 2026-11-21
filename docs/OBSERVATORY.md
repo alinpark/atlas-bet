@@ -103,6 +103,17 @@ les résultats. Les échecs réseau consomment la réservation locale par pruden
 Le mode historique reste disponible avec `bet.odds.scheduled=false` ; alors seulement
 `ODDS_ADAPTIVE=false` rétablit l'intervalle fixe.
 
+## Protection CSRF (21 novembre 2026)
+
+Toute requête d'écriture authentifiée (POST, PUT, PATCH, DELETE) doit porter l'en-tête
+`X-Atlas-Request` (valeur libre non vide ; `observatory` pour les constats). Sans lui :
+HTTP 403, rien n'est exécuté. Raison : l'interface web s'utilise avec un mot de passe Basic
+mémorisé par le navigateur ; un formulaire tiers pouvait déclencher `/admin/resume`,
+`/admin/pipeline/run` ou `/admin/ratings/refresh`. Un site tiers ne peut pas ajouter un
+en-tête personnalisé sans CORS, qui n'est pas configuré. Les lectures (GET) ne sont pas
+concernées. Test : `ApiTest.authenticatedWritesWithoutTheRequestHeaderAreRefused`.
+Pour un appel manuel : `curl -u admin:… -H "X-Atlas-Request: cli" -X POST …`.
+
 ## Traçabilité et accès
 
 GET `/api/v1/observatory`, `/event?id=...`, `/experiments`, `/laboratory?experiment=market-v2:soccer_spain_la_liga`.

@@ -10,7 +10,7 @@ $project = 'atlas-bet-smoke'
 $env:BET_HTTP_PORT = '18083'
 $compose = @('compose', '-p', $project, '--env-file', 'demo.env', '-f', 'compose.yaml', '-f', 'compose.demo.yaml')
 $base = 'http://127.0.0.1:18083/api/v1'
-$auth = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:demo-admin-local')) }
+$auth = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:demo-admin-local')); 'X-Atlas-Request' = 'script' }
 $callback = 0
 
 function Api([string]$Method, [string]$Path, $Body = $null, [string]$Raw = $null) {

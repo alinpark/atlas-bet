@@ -97,7 +97,7 @@ class ObservatoryTest extends PostgresTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.reference_probabilities.home").value(0.5));
         String url="/api/v1/observatory/observations/"+id+"/feedback";
         mvc.perform(post(url).with(httpBasic("admin","test-admin")).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"IGNORED\",\"reason\":\"test\"}"))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isForbidden());
         mvc.perform(post(url).with(httpBasic("admin","test-admin")).header("X-Atlas-Request","observatory").contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"IGNORED\",\"reason\":\"test\"}"))
             .andExpect(status().isOk());
     }

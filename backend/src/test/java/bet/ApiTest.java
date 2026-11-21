@@ -3,7 +3,10 @@ package bet;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,6 +28,29 @@ class ApiTest extends PostgresTest {
             .andExpect(jsonPath("$.paths['/api/v1/manual-bets']").exists());
     }
 
+    /** CSRF : un formulaire tiers renvoie les identifiants Basic mémorisés, mais pas l'en-tête dédié. */
+    @Test
+    void authenticatedWritesWithoutTheRequestHeaderAreRefused() throws Exception {
+        for (String path : List.of("/api/v1/admin/pause", "/api/v1/admin/resume", "/api/v1/admin/pipeline/run",
+                "/api/v1/admin/ratings/refresh")) {
+            mvc.perform(post(path).with(httpBasic("admin", "test-admin"))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("X-Atlas-Request")));
+        }
+        mvc.perform(post("/api/v1/manual-bets").with(httpBasic("admin", "test-admin"))
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+        assertEquals(0, db.queryForObject("SELECT count(*) FROM audit_event", Integer.class));
+        assertNull(db.queryForObject("SELECT paused_until FROM risk_policy WHERE id", Object.class));
+        // Avec l'en-tête : l'action passe ; sans authentification : toujours 401.
+        mvc.perform(post("/api/v1/admin/pause").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.paused").value(true));
+        mvc.perform(post("/api/v1/admin/resume").header(Security.HEADER, "test")).andExpect(status().isUnauthorized());
+        // Les lectures ne demandent pas l'en-tête.
+        mvc.perform(get("/api/v1/risk/status").with(httpBasic("admin", "test-admin"))).andExpect(status().isOk());
+    }
+
     @Test
     void manualBetRefusalIsExplainedAndPipelineIsExposed() throws Exception {
         String body = """
@@ -32,21 +58,21 @@ class ApiTest extends PostgresTest {
              "outcome":"home","bookmaker":"winamax_fr","odds":2.1,"stake":500,"source":"HORS_BOT"}
             """;
         // Contrôle préalable : 500 EUR dépasseraient la mise maximale.
-        mvc.perform(post("/api/v1/risk/check").with(httpBasic("admin", "test-admin"))
+        mvc.perform(post("/api/v1/risk/check").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"stake\":500}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.allowed").value(false));
         // Mais un pari déjà placé est enregistré, avec le dépassement tracé.
-        mvc.perform(post("/api/v1/manual-bets").with(httpBasic("admin", "test-admin"))
+        mvc.perform(post("/api/v1/manual-bets").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test")
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isOk()).andExpect(jsonPath("$.source").value("HORS_BOT"))
             .andExpect(jsonPath("$.limit_breach").value(org.hamcrest.Matchers.containsString("mise maximale")));
-        mvc.perform(post("/api/v1/admin/pipeline/run").with(httpBasic("admin", "test-admin")))
+        mvc.perform(post("/api/v1/admin/pipeline/run").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.recommendations").value(3));
         mvc.perform(get("/api/v1/opportunities?sport=tennis").with(httpBasic("admin", "test-admin")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
         mvc.perform(get("/api/v1/events/upcoming").with(httpBasic("admin", "test-admin")))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].odds_fresh").value(true));
-        mvc.perform(post("/api/v1/strategies").with(httpBasic("admin", "test-admin")).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/strategies").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"parameters\":{\"min_ev\":0.05,\"max_odds_age_minutes\":10,\"expiry_minutes\":30,\"paper_stake\":5}}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(2));
         mvc.perform(get("/api/v1/risk/status").with(httpBasic("admin", "test-admin")))
@@ -57,13 +83,13 @@ class ApiTest extends PostgresTest {
     @Test
     void backtestIsAnIdempotentAsynchronousJob() throws Exception {
         String body = "{\"requestKey\":\"bt-1\",\"samples\":[{\"event\":\"x\"}]}";
-        String id = com.jayway.jsonpath.JsonPath.read(mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin"))
+        String id = com.jayway.jsonpath.JsonPath.read(mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString(), "$.id");
-        mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin"))
+        mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test")
                 .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(jsonPath("$.id").value(id));
-        mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin"))
+        mvc.perform(post("/api/v1/backtests").with(httpBasic("admin", "test-admin")).header(Security.HEADER, "test")
                 .contentType(MediaType.APPLICATION_JSON).content(body.replace("\"x\"", "\"y\"")))
             .andExpect(status().isConflict());
         for (int i = 0; i < 50; i++) {
