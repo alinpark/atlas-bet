@@ -56,7 +56,7 @@ class ObservatoryTest extends PostgresTest {
     @Test void freezeDeadlineAndNoRetrospectiveObservations() {
         fixture(); db.update("UPDATE research_experiment SET ends_at=now()-interval '1 second'");
         assertEquals(0,observatory.capture());
-        assertEquals("PILOTE TERMINÉ — AUCUNE VALIDATION",((Map<?,?>)observatory.laboratory("market-v2:soccer_france_ligue_one").get("summary")).get("decision"));
+        assertEquals("PILOTE TERMINÉ — AUCUNE VALIDATION",((Map<?,?>)observatory.laboratory("window-v1:soccer_france_ligue_one").get("summary")).get("decision"));
         db.update("UPDATE research_experiment SET ends_at=now()+interval '90 days',started_at=now()+interval '1 minute'");
         assertEquals(0,observatory.capture());
     }
@@ -65,19 +65,19 @@ class ObservatoryTest extends PostgresTest {
         db.update("UPDATE event SET starts_at=now()-interval '1 minute',status='COMPLETE' WHERE id='odds-api:research'");
         db.update("UPDATE odds_snapshot SET observed_at=now()-interval '5 minutes',updated_at=now()-interval '5 minutes'");
         db.update("INSERT INTO result_snapshot(event_id,source,observed_at,result) VALUES ('odds-api:research','test',now(),'{\"winner\":\"home\"}')");
-        var summary=(Map<?,?>)observatory.laboratory("market-v2:soccer_france_ligue_one").get("summary");
+        var summary=(Map<?,?>)observatory.laboratory("window-v1:soccer_france_ligue_one").get("summary");
         assertEquals(1,summary.get("closing_count")); assertEquals(1.2,(Double)summary.get("roi"),1e-9);
         db.update("UPDATE odds_snapshot SET updated_at=now()-interval '40 minutes'");
-        summary=(Map<?,?>)observatory.laboratory("market-v2:soccer_france_ligue_one").get("summary");
+        summary=(Map<?,?>)observatory.laboratory("window-v1:soccer_france_ligue_one").get("summary");
         assertEquals(0,summary.get("closing_count")); assertNull(summary.get("mean_clv"));
         db.update("UPDATE odds_snapshot SET observed_at=now(),updated_at=now()");
-        assertEquals(0,((Map<?,?>)observatory.laboratory("market-v2:soccer_france_ligue_one").get("summary")).get("closing_count"));
+        assertEquals(0,((Map<?,?>)observatory.laboratory("window-v1:soccer_france_ligue_one").get("summary")).get("closing_count"));
     }
     @Test void availabilityRequiresPriceAndPrematchTimestamp() {
         fixture(); observatory.capture(); long id=db.queryForObject("SELECT id FROM research_observation",Long.class);
         assertThrows(ApiException.class,()->observatory.feedback(id,new Observatory.Feedback("AVAILABLE",null,"test")));
         observatory.feedback(id,new Observatory.Feedback("AVAILABLE",new BigDecimal("2.1"),"Constat compte"));
-        assertEquals(1,((Map<?,?>)observatory.laboratory("market-v2:soccer_france_ligue_one").get("summary")).get("available"));
+        assertEquals(1,((Map<?,?>)observatory.laboratory("window-v1:soccer_france_ligue_one").get("summary")).get("available"));
         db.update("UPDATE event SET starts_at=now()-interval '1 minute'");
         assertThrows(ApiException.class,()->observatory.feedback(id,new Observatory.Feedback("AVAILABLE",new BigDecimal("2.1"),"trop tard")));
         observatory.feedback(id,new Observatory.Feedback("IGNORED",null,"Pas disponible pour suivre"));

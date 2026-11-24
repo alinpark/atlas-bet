@@ -55,7 +55,7 @@ abstract class PostgresTest {
             UPDATE risk_policy SET cap=2000, pending_cap=NULL, effective_at=NULL, max_stake=100, max_exposure=500,
                    max_daily_loss=250, paused_until=NULL, resume_not_before=NULL WHERE id
             """);
-        db.update("UPDATE research_experiment SET started_at=now()-interval '1 hour',ends_at=now()+interval '365 days',capture_enabled=(id<>'fr-pinnacle-v1')");
+        db.update("UPDATE research_experiment SET started_at=now()-interval '1 hour',ends_at=now()+interval '365 days',capture_enabled=(id LIKE 'window-v1:%')");
         db.update("DELETE FROM strategy WHERE revision > 1");
         db.update("UPDATE model_version SET status='UNVALIDATED'");
         db.update("DELETE FROM app_setting WHERE key <> 'pipeline_lease'");

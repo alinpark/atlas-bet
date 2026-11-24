@@ -43,6 +43,7 @@ public class TelegramOutbox {
     /** Les observations PAPER et bulletins périmés ne doivent jamais être rejoués après une panne. */
     public void enqueueUntil(String key, Long recommendation, String text, List<List<Button>> keyboard,
                              java.time.Instant expiresAt) {
+        if (demoSuppressed(recommendation)) return;
         String payload;
         try {
             var content = new java.util.LinkedHashMap<String, Object>();
@@ -60,6 +61,10 @@ public class TelegramOutbox {
                 VALUES (?,?,?::jsonb,?) ON CONFLICT (idempotency_key) DO NOTHING
                 """, key + ":" + (chat == null ? "local" : chat), recommendation, payload, chat);
         }
+    }
+
+    boolean demoSuppressed(Long recommendation) {
+        return !settings.simulator && recommendation != null && Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS (SELECT 1 FROM recommendation r JOIN event e ON e.id=r.event_id WHERE r.id=? AND e.source='DEMO')", Boolean.class, recommendation));
     }
 
     /** Envoie un lot de messages en attente ; un échec est replanifié avec un délai croissant. */
@@ -116,6 +121,7 @@ public class TelegramOutbox {
      * jamais pendant une pause ou au-delà d'une limite, ni pour une sélection devenue caduque.
      */
     private String cancelReason(Map<String, Object> row, Map<String, Object> status) {
+        if (demoSuppressed((Long) row.get("recommendation_id"))) return "démo désactivée sur le transport réel";
         String key = Rows.text(row, "idempotency_key");
         if (key.startsWith("paper:")) {
             try {

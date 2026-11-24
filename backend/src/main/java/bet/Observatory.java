@@ -68,17 +68,30 @@ public class Observatory {
     private int capture(Map<String,Object> exp) {
         var p=params(exp); Instant at=now();
         if (!at.isBefore(Rows.instant(exp,"ends_at"))) return 0;
+        int min=p.path("entry_min_minutes").asInt(15), max=p.path("entry_max_minutes").asInt(60);
+        db.update("""
+            INSERT INTO research_scan(experiment_id,event_id,reason)
+            SELECT ?,e.id,'Fenêtre manquée : aucun relevé exploitable à temps'
+            FROM event e WHERE e.source='odds-api' AND e.competition=?
+              AND e.starts_at>? AND e.starts_at<=? AND e.starts_at<? AND e.status<>'CANCELLED'
+              AND NOT EXISTS(SELECT 1 FROM research_observation o WHERE o.event_id=e.id AND o.experiment_id=?)
+            ON CONFLICT DO NOTHING
+            """,exp.get("id"),exp.get("competition"),exp.get("started_at"),Rows.sql(at.plus(Duration.ofMinutes(min))),exp.get("ends_at"),exp.get("id"));
         var events=db.queryForList("""
-            SELECT e.id FROM event e WHERE e.source='odds-api' AND e.competition=? AND e.status='SCHEDULED'
+            SELECT e.id,e.starts_at FROM event e WHERE e.source='odds-api' AND e.competition=? AND e.status='SCHEDULED'
               AND e.starts_at>? AND e.starts_at<=? AND NOT EXISTS
               (SELECT 1 FROM research_observation o WHERE o.event_id=e.id AND o.experiment_id=?)
             ORDER BY e.starts_at,e.id
-            """,exp.get("competition"),Rows.sql(p.path("descriptive_only").asBoolean()?at.plus(Duration.ofMinutes(15)):at),exp.get("ends_at"),exp.get("id"));
+            """,exp.get("competition"),Rows.sql(at.plus(Duration.ofMinutes(min))),Rows.sql(at.plus(Duration.ofMinutes(max)).isBefore(Rows.instant(exp,"ends_at"))?at.plus(Duration.ofMinutes(max)):Rows.instant(exp,"ends_at")),exp.get("id"));
         int count=0;
         for(var event:events) {
-            var all=prices(Rows.text(event,"id"),at);
+            Instant earliest=Rows.instant(event,"starts_at").minus(Duration.ofMinutes(max));
+            var all=prices(Rows.text(event,"id"),at).stream()
+                .filter(x->!Rows.instant(x,"observed_at").isBefore(earliest)).toList();
             var probabilities=fair(all,at,p.path("max_age_minutes").asInt());
-            if(probabilities.isEmpty()) continue;
+            if(probabilities.isEmpty()) {
+                scan(exp,event,"Référence Pinnacle absente, incomplète ou périmée"); continue;
+            }
             var refs=all.stream().filter(x->"pinnacle".equals(x.get("bookmaker"))).toList();
             var best=all.stream().filter(x->TheOddsApi.FRENCH_BOOKS.contains(x.get("bookmaker")))
                 .filter(x->fresh(x,at,p.path("max_age_minutes").asInt()))
@@ -89,15 +102,22 @@ public class Observatory {
                 .sorted(Comparator.<Map<String,Object>>comparingDouble(x->edge(x,probabilities)).reversed()
                     .thenComparing(x->Rows.text(x,"bookmaker")).thenComparing(x->Rows.text(x,"outcome")))
                 .findFirst();
-            if(best.isEmpty()) continue;
+            if(best.isEmpty()) {
+                boolean freshFr=all.stream().anyMatch(x->TheOddsApi.FRENCH_BOOKS.contains(x.get("bookmaker")) && fresh(x,at,p.path("max_age_minutes").asInt()));
+                scan(exp,event,freshFr?"Aucun écart admissible (seuil, fraîcheur et synchronisation)":"Cotes françaises absentes ou périmées"); continue;
+            }
             var b=best.get();
             count+=db.update("""
-                INSERT INTO research_observation(experiment_id,event_id,odds_id,reference_ids,fair_probability,edge)
-                VALUES (?,?,?,?::jsonb,?,?) ON CONFLICT DO NOTHING
+                INSERT INTO research_observation(experiment_id,event_id,odds_id,reference_ids,fair_probability,edge,starts_at_capture)
+                VALUES (?,?,?,?::jsonb,?,?,?) ON CONFLICT DO NOTHING
                 """,exp.get("id"),event.get("id"),b.get("id"),refs.stream().map(r->Rows.number(r,"id")).toList().toString(),
-                probabilities.get(Rows.text(b,"outcome")),edge(b,probabilities));
+                probabilities.get(Rows.text(b,"outcome")),edge(b,probabilities),event.get("starts_at"));
+            scan(exp,event,"Pari test enregistré");
         }
         return count;
+    }
+    private void scan(Map<String,Object> exp,Map<String,Object> event,String reason) {
+        db.update("INSERT INTO research_scan(experiment_id,event_id,reason) VALUES (?,?,?) ON CONFLICT(experiment_id,event_id) DO UPDATE SET checked_at=now(),reason=EXCLUDED.reason",exp.get("id"),event.get("id"),reason);
     }
     private static double edge(Map<String,Object> row,Map<String,Double> probabilities) {
         return Rows.decimal(row,"price").doubleValue()*probabilities.get(Rows.text(row,"outcome"))-1;
@@ -109,7 +129,15 @@ public class Observatory {
         return Map.of("at",at,"events",events,"risk",status,
             "providers",db.queryForList("SELECT id,status,detail,quota_remaining,quota_at,checked_at FROM provider_health ORDER BY id"),
             "collection",db.queryForList("SELECT * FROM collection_budget ORDER BY month DESC LIMIT 1"),
-            "competitions",competitions(), "mode","PAPER — aucune validation de rentabilité");
+            "pending_results",pendingResults(), "competitions",competitions(), "mode","PAPER — aucune validation de rentabilité");
+    }
+    public List<Map<String,Object>> pendingResults() {
+        return db.queryForList(EVENTS+"""
+            WHERE e.source='odds-api' AND e.status='SCHEDULED' AND e.starts_at<now()-interval '3 hours'
+              AND (EXISTS(SELECT 1 FROM research_observation o WHERE o.event_id=e.id)
+                OR EXISTS(SELECT 1 FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id JOIN odds_snapshot s ON s.id=o.odds_id WHERE s.event_id=e.id))
+            ORDER BY e.starts_at LIMIT 200
+            """);
     }
     public List<Map<String,Object>> competitions() {
         return Competitions.ALL.stream().map(c->{
@@ -117,7 +145,7 @@ public class Observatory {
             row.put("rules","1X2 à 90 minutes, arrêts de jeu inclus ; hors prolongations et tirs au but");
             row.put("upcoming",db.queryForObject("SELECT count(*) FROM event WHERE competition=? AND source='odds-api' AND status='SCHEDULED' AND starts_at>now() AND starts_at<now()+interval '7 days'",Long.class,c.id()));
             row.put("collection",db.queryForList("SELECT * FROM competition_collection WHERE competition=?",c.id()));
-            row.put("results",c.cup()?"Score à 90 minutes requis (API-Football)":"Scores The Odds API");
+            row.put("results",c.cup()?(news.configured()?"Résultat à 90 minutes : API-Football":"Résultat à 90 minutes : vérification manuelle sourcée requise") :"Résultats automatiques ; saisie sourcée si manquants");
             return row;
         }).toList();
     }
@@ -138,7 +166,7 @@ public class Observatory {
         if(pred.isEmpty()) reasons.add("Probabilités du modèle indisponibles");
         else if(pred.stream().anyMatch(p->!"VALIDATED".equals(p.get("model_status")))) reasons.add("Modèle non validé : observation uniquement");
         if(!demo && !news.lineupsConfirmed(id)) reasons.add("Compositions officielles non confirmées");
-        if(!demo && Competitions.cup(Rows.text(event,"competition")) && !news.configured()) reasons.add("Résultat à 90 minutes non suivi : API-Football non configurée");
+        if(!demo && Competitions.cup(Rows.text(event,"competition")) && !news.configured()) reasons.add("Résultat à 90 minutes : vérification manuelle requise");
         if(Boolean.TRUE.equals(status.get("blocked"))) reasons.add("Propositions bloquées par la politique de risque");
         event.put("reasons",reasons); event.put("prices",all); event.put("reference_probabilities",probs);
         event.put("predictions",pred); event.put("demo",demo);
@@ -152,6 +180,8 @@ public class Observatory {
         if(list.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND,"Match inconnu");
         var event=list.getFirst(); Instant at=now(); enrich(event,at,risk.status());
         event.put("at",at);
+        event.put("result_evidence",db.queryForList("SELECT * FROM verified_result WHERE event_id=?",id));
+        event.put("can_record_result","odds-api".equals(event.get("source")) && "SCHEDULED".equals(event.get("status")) && Rows.instant(event,"starts_at").plus(Duration.ofHours(3)).isBefore(at));
         event.put("history",db.queryForList("SELECT bookmaker,outcome,price,observed_at,updated_at FROM odds_snapshot WHERE event_id=? ORDER BY observed_at DESC,id DESC LIMIT 300",id));
         event.put("recommendations",db.queryForList("""
             SELECT r.id,r.status,r.created_at,min(d.delivered_at) AS delivered_at FROM recommendation r
@@ -244,6 +274,7 @@ public class Observatory {
         summary.put("checked",checked); summary.put("available",available); summary.put("decision",decision);
         exp.put("parameters",parameters);
         return Map.of("experiment",exp,"summary",summary,"observations",observations,
+            "scans",db.queryForList("SELECT reason,count(*) AS count FROM research_scan WHERE experiment_id=? GROUP BY reason ORDER BY reason",id),
             "caveat","PAPER à mise constante de 1 unité. Cotes proposées non garanties accessibles ; confirmations déclaratives. IC bootstrap par jour, 2 000 tirages ; au moins 20 jours. CLV positive ≠ rentabilité prouvée. Aucun changement automatique de modèle.");
     }
     static double[] clusterInterval(Map<String,List<Double>> clusters) {

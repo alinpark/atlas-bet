@@ -23,7 +23,7 @@ class SixCompetitionsTest extends PostgresTest {
         assertEquals(0,observatory.capture());
         assertEquals(0,((Map<?,?>)observatory.laboratory().get("summary")).get("observations"));
         for(var c:Competitions.ALL) {
-            var data=observatory.laboratory("market-v2:"+c.id());
+            var data=observatory.laboratory("window-v1:"+c.id());
             assertEquals(1,((Map<?,?>)data.get("summary")).get("observations"));
             assertEquals(c.id(),((Map<?,?>)data.get("experiment")).get("competition"));
         }

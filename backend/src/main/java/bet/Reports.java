@@ -333,10 +333,10 @@ public class Reports {
     }
 
     public String paper() {
-        StringBuilder text=new StringBuilder("🧪 RÉSULTATS DES PARIS TESTS\nDepuis le début du suivi, sans argent engagé.\nExemple : 10 € fictifs par match, sans réinvestir les gains.\n");
+        StringBuilder text=new StringBuilder("🧪 RÉSULTATS DES PARIS TESTS\nProtocole actuel : fenêtre 60–50 min avant match, sans argent engagé.\nExemple : 10 € fictifs par match, sans réinvestir les gains.\n");
         var now=db.queryForObject("SELECT now()", java.sql.Timestamp.class).toInstant();
         for(var c:Competitions.ALL) {
-            var data=observatory.laboratory("market-v2:"+c.id());
+            var data=observatory.laboratory("window-v1:"+c.id());
             var summary=(Map<String,Object>)data.get("summary");
             int total=((Number)summary.get("observations")).intValue();
             int settled=((Number)summary.get("settled")).intValue();
@@ -360,6 +360,9 @@ public class Reports {
                     .append(" de mises fictives.\n");
             }
         }
+        long archived=db.queryForObject("SELECT count(*) FROM research_observation WHERE experiment_id LIKE 'market-v2:%'",Long.class);
+        if(archived>0) text.append("\nAncien protocole : ").append(archived).append(" observations conservées séparément dans Simulation → Archives.\n");
+        text.append("\nCoupes européennes : résultat à 90 minutes à vérifier dans l’interface si la source automatique est absente.\n");
         return text.append("\nUn résultat manquant n’est ni un gain ni une perte.\n")
             .append("Ces tests ne prouvent pas qu’Atlas te ferait gagner de l’argent.\n/today : voir les matchs").toString();
     }

@@ -33,7 +33,7 @@ class SimulationApiTest extends PostgresTest {
    db.update("UPDATE event SET source='odds-api' WHERE id=?",event);
    db.update("""
        INSERT INTO research_observation(experiment_id,event_id,odds_id,reference_ids,fair_probability,edge)
-       SELECT 'market-v2:soccer_france_ligue_one',s.event_id,s.id,'[]'::jsonb,0.5,0.03
+       SELECT 'window-v1:soccer_france_ligue_one',s.event_id,s.id,'[]'::jsonb,0.5,0.03
        FROM odds_snapshot s WHERE s.event_id=? AND s.outcome='home' LIMIT 1
        """,event);
    assertEquals(1,count(run("DELIVERED")));assertEquals(1,count(run("RESEARCH")));assertEquals(2,count(run("DEMO")));

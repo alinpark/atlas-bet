@@ -21,17 +21,21 @@ public class Simulation {
     static void require(boolean valid,String message) { if(!valid) throw new ApiException(HttpStatus.BAD_REQUEST,message); }
 
     public Map<String,Object> run(String source,String competition,LocalDate from,LocalDate to,BigDecimal capital,BigDecimal fixed,BigDecimal percent) {
-        require(Set.of("DELIVERED","RESEARCH","DEMO").contains(source),"Source inconnue");
+        require(Set.of("DELIVERED","RESEARCH","ARCHIVE","MODEL","DEMO").contains(source),"Source inconnue");
         require(from!=null && to!=null && !to.isBefore(from) && !to.isAfter(LocalDate.now(Rows.PARIS)) && from.plusYears(5).isAfter(to),"Période invalide (maximum 5 ans, sans date future)");
         require(capital!=null && capital.compareTo(BigDecimal.ONE)>=0 && capital.compareTo(new BigDecimal("1000000"))<=0 && capital.scale()<=2,"Capital : 1 à 1 000 000 €, deux décimales maximum");
         require(fixed!=null && fixed.compareTo(new BigDecimal("0.01"))>=0 && fixed.compareTo(capital)<=0 && fixed.scale()<=2,"Mise fixe invalide");
         require(percent!=null && percent.compareTo(new BigDecimal("0.01"))>=0 && percent.compareTo(new BigDecimal("10"))<=0 && percent.scale()<=2,"Pourcentage : 0,01 à 10 %");
         Instant begin=from.atStartOfDay(Rows.PARIS).toInstant(),end=to.plusDays(1).atStartOfDay(Rows.PARIS).toInstant().minusNanos(1);
         Instant now=db.queryForObject("SELECT now()",java.sql.Timestamp.class).toInstant(); if(end.isAfter(now)) end=now;
-        String entries=source.equals("RESEARCH")?"""
+        String entries=source.equals("MODEL")?"""
+            SELECT 'MODEL-'||b.id AS id,s.event_id,o.odds_id,b.created_at AS at
+            FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id JOIN odds_snapshot s ON s.id=o.odds_id
+            JOIN event e ON e.id=s.event_id WHERE e.source='odds-api'
+            """:(source.equals("RESEARCH")||source.equals("ARCHIVE"))?"""
             SELECT 'PAPER-'||o.id AS id,o.event_id,o.odds_id,o.created_at AS at
-            FROM research_observation o WHERE o.experiment_id LIKE 'market-v2:%'
-            """:"""
+            FROM research_observation o WHERE o.experiment_id LIKE '%s'
+            """.formatted(source.equals("ARCHIVE")?"market-v2:%":"window-v1:%"):"""
             SELECT 'REC-'||r.id AS id,r.event_id,o.odds_id,min(d.delivered_at) AS at
             FROM recommendation r JOIN opportunity o ON o.id=r.opportunity_id
             JOIN telegram_outbox t ON t.recommendation_id=r.id AND t.idempotency_key LIKE 'rec:%'
