@@ -17,6 +17,8 @@ public class Observatory {
     private final ObjectMapper json;
     private final RiskService risk;
     private final TeamNews news;
+    @org.springframework.beans.factory.annotation.Autowired
+    private SportAnalysis sports;
     public Observatory(JdbcTemplate db, ObjectMapper json, RiskService risk, TeamNews news) {
         this.db=db; this.json=json; this.risk=risk; this.news=news;
     }
@@ -173,6 +175,7 @@ public class Observatory {
         event.put("observations",db.queryForList("SELECT id,edge,created_at FROM research_observation WHERE event_id=? ORDER BY id",id));
         event.put("news",news.news(id));
         event.put("news_configured",news.configured());
+        event.put("sport_analysis",sports.latest(id));
         event.put("latest_price_at",all.stream().map(p->Rows.instant(p,"observed_at")).max(Comparator.naturalOrder()).orElse(null));
     }
     public Map<String,Object> dossier(String id) {

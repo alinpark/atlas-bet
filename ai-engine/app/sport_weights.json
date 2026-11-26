@@ -1,0 +1,114 @@
+{
+  "version": "sport-form-v1",
+  "features": [
+    "intercept",
+    "home",
+    "attack_goals",
+    "opponent_conceded",
+    "attack_shots_on_target",
+    "opponent_shots_on_target",
+    "elo_difference",
+    "rest_difference"
+  ],
+  "weights": [
+    0.21214426916033832,
+    0.20900858331854444,
+    0.2782557429325963,
+    0.15943775024375478,
+    0.23585201459567887,
+    0.15595820069835784,
+    0.49781362055399436,
+    -0.01719539078985585
+  ],
+  "trained_through": "2024-12-31",
+  "training_matches": 15084,
+  "validation": {
+    "from": "2025-01-01",
+    "through": "2026-06-30",
+    "method": "Chronological holdout; same-day batches; no odds inputs",
+    "overall": {
+      "matches": 3920,
+      "log_loss": 0.990388289418467,
+      "brier": 0.5904684545912766,
+      "accuracy": 0.5130102040816327,
+      "ece": 0.01730427760280203,
+      "baseline_log_loss": 1.0783549462314055,
+      "baseline_brier": 0.6530898468038207
+    },
+    "by_league": {
+      "F1": {
+        "matches": 454,
+        "log_loss": 0.9868889277607642,
+        "brier": 0.5888362140368192,
+        "accuracy": 0.5154185022026432,
+        "ece": 0.02737101338120615,
+        "baseline_log_loss": 1.0578962986926257,
+        "baseline_brier": 0.6393814869724328
+      },
+      "E0": {
+        "matches": 550,
+        "log_loss": 1.0037407200639328,
+        "brier": 0.6010666741090038,
+        "accuracy": 0.5072727272727273,
+        "ece": 0.007451552006244565,
+        "baseline_log_loss": 1.0808599983461609,
+        "baseline_brier": 0.6550394682984352
+      },
+      "D1": {
+        "matches": 461,
+        "log_loss": 0.999022033320819,
+        "brier": 0.5946073680887174,
+        "accuracy": 0.5206073752711496,
+        "ece": 0.03239093802020101,
+        "baseline_log_loss": 1.086609488125315,
+        "baseline_brier": 0.6592567309323579
+      },
+      "SP1": {
+        "matches": 558,
+        "log_loss": 0.976697283731771,
+        "brier": 0.5791720914087937,
+        "accuracy": 0.5304659498207885,
+        "ece": 0.03242196073038968,
+        "baseline_log_loss": 1.057810794303338,
+        "baseline_brier": 0.6383453039921042
+      },
+      "I1": {
+        "matches": 559,
+        "log_loss": 0.9927144477494227,
+        "brier": 0.5925823281496493,
+        "accuracy": 0.5205724508050089,
+        "ece": 0.00735462736311733,
+        "baseline_log_loss": 1.0892589827700752,
+        "baseline_brier": 0.660862770016441
+      },
+      "N1": {
+        "matches": 438,
+        "log_loss": 0.9990208986509806,
+        "brier": 0.5961659193677047,
+        "accuracy": 0.4931506849315068,
+        "ece": 0.03604924356239157,
+        "baseline_log_loss": 1.078578825887573,
+        "baseline_brier": 0.652348309816007
+      },
+      "P1": {
+        "matches": 453,
+        "log_loss": 0.9455071277223225,
+        "brier": 0.5601150269861447,
+        "accuracy": 0.5364238410596026,
+        "ece": 0.03091601242612033,
+        "baseline_log_loss": 1.0886354905692541,
+        "baseline_brier": 0.6602101526915848
+      },
+      "B1": {
+        "matches": 447,
+        "log_loss": 1.0198157155242877,
+        "brier": 0.611453478806954,
+        "accuracy": 0.4742729306487696,
+        "ece": 0.03408571267947256,
+        "baseline_log_loss": 1.0889102884740682,
+        "baseline_brier": 0.6604501497224404
+      }
+    },
+    "scope": "Statistical base only. No historical lineup/injury test; no profitability claim."
+  }
+}

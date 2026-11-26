@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 public class Reports {
     @org.springframework.beans.factory.annotation.Autowired
     private Observatory observatory;
+    @org.springframework.beans.factory.annotation.Autowired
+    private SportAnalysis sports;
     static final String WARNING = "Aucun pari n'est placé automatiquement. Une estimation peut se tromper ; "
         + "ne misez que ce que vous acceptez de perdre.";
     static final String ANJ = "Rappel : configurez aussi chez chaque opérateur agréé vos limites de dépôts et de mises "
@@ -166,7 +168,7 @@ public class Reports {
                 .append(". Aucune nouvelle proposition de mise.\n\n");
         }
         if (rows.isEmpty()) {
-            return text.append(observatory.todayText()).append("\n\nAucun pari réel recommandé. Rien à miser sur la base de ces tests.").toString();
+            return text.append(sports.telegramSummary()).append("\n\nAucun pari réel recommandé. Rien à miser sur la base de ces tests.").toString();
         }
         text.append(observatory.todayText()).append("\n\nSélections actives (3 maximum ; DEMO = fictif) :");
         for (var row : rows) {

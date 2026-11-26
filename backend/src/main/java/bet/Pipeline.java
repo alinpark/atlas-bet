@@ -54,6 +54,8 @@ public class Pipeline {
     private final java.util.Set<String> oddsSources;
     @Value("${bet.pipeline.real-odds-max-age-minutes:135}")
     private int realOddsMaxAge = 135;
+    @Value("${bet.sport.enabled:true}")
+    private boolean sportAnalysisEnabled = true;
 
     public Pipeline(JdbcTemplate db, ObjectMapper json, TransactionTemplate tx,
                     List<Providers.OddsProvider> oddsProviders, List<Providers.ResultsProvider> resultsProviders,
@@ -182,6 +184,7 @@ public class Pipeline {
         for (var event : events) {
             String sport = Rows.text(event, "sport");
             String eventId = Rows.text(event, "id");
+            if(sportAnalysisEnabled && "soccer".equals(sport) && "odds-api".equals(event.get("source"))) continue;
             Instant startsAt = Rows.instant(event, "starts_at");
             Optional<Ratings> ratings = stats.ratings(Rows.text(event, "source"), sport,
                 Rows.text(event, "competition"), Rows.text(event, "home"), Rows.text(event, "away"));
@@ -263,7 +266,7 @@ public class Pipeline {
         var candidates = db.queryForList("""
             WITH latest_pred AS (
               SELECT DISTINCT ON (f.event_id, p.outcome) p.id, f.event_id, p.outcome, p.p, p.p_lower,
-                     m.status AS model_status
+                     m.status AS model_status, p.model, p.feature_id
               FROM prediction p JOIN feature_snapshot f ON f.id=p.feature_id JOIN model_version m ON m.id=p.model
               ORDER BY f.event_id, p.outcome, p.observed_at DESC),
             fresh_odds AS (
@@ -275,6 +278,12 @@ public class Pipeline {
             FROM fresh_odds o JOIN latest_pred lp ON lp.event_id=o.event_id AND lp.outcome=o.outcome
             JOIN event e ON e.id=o.event_id
             WHERE e.status='SCHEDULED' AND e.starts_at > now() AND o.bookmaker<>'pinnacle'
+              AND (lp.model<>'sport-form-v1' OR (
+                lp.outcome=(SELECT p2.outcome FROM prediction p2 WHERE p2.feature_id=lp.feature_id ORDER BY p2.p DESC,p2.outcome LIMIT 1)
+                AND EXISTS(SELECT 1 FROM sport_analysis sa WHERE sa.event_id=e.id AND sa.starts_at=e.starts_at
+                  AND sa.id=(SELECT max(sa2.id) FROM sport_analysis sa2 WHERE sa2.event_id=e.id)
+                  AND sa.payload->>'status'='ANALYZED' AND sa.observed_at>now()-interval '10 minutes'
+                  AND sa.payload->'context'->>'lineup_status'='CONFIRMED')))
             ORDER BY e.starts_at, e.id
             """, maxAge, realOddsMaxAge);
         Map<String, Map<String, Object>> best = new LinkedHashMap<>();

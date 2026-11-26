@@ -48,6 +48,22 @@ def health():
     return {"status": "UP"}
 
 
+class SportingRequest(BaseModel):
+    competition: str = Field(min_length=1, max_length=100)
+    home: str = Field(min_length=1, max_length=120)
+    away: str = Field(min_length=1, max_length=120)
+    startsAt: AwareDatetime
+
+
+@app.post('/analysis/football', dependencies=[Depends(authorize)])
+def sporting_analysis(request: SportingRequest):
+    from app.free_football import analyze
+    try:
+        return analyze(request.model_dump(mode='json'))
+    except (ValueError, KeyError, TypeError):
+        raise HTTPException(503, 'Analyse sportive indisponible ; aucune prévision de remplacement')
+
+
 class Season(BaseModel):
     season: str = Field(pattern=r"^\d{4}$")
     csv: str = Field(max_length=2_000_000)

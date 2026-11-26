@@ -55,6 +55,9 @@ public final class Providers {
     public record Forecast(String modelVersion, String modelStatus, Map<String, Probability> outcomes) {}
 
     public interface ProbabilityEngine {
+        default com.fasterxml.jackson.databind.JsonNode sportingAnalysis(Map<String, Object> request) {
+            throw new UnsupportedOperationException("Sport analysis unavailable");
+        }
         Forecast predict(String sport, String eventId, Instant featureTimestamp, Instant startsAt, Ratings ratings);
 
         Object backtest(Object samples);

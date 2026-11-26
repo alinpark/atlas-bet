@@ -1,3 +1,5 @@
+> Mise à jour du 26 novembre 2026 : le nouveau moteur `sport-form-v1` est décrit dans [SPORT_ENGINE.md](SPORT_ENGINE.md). Les résultats ci-dessous restent ceux des modèles et expériences antérieurs, séparés du nouveau suivi.
+
 # Fiche des modèles
 
 Statut de tous les modèles : **UNVALIDATED**. Le modèle football a été testé sur données

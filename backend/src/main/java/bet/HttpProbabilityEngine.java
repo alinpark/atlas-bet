@@ -21,7 +21,7 @@ public class HttpProbabilityEngine implements Providers.ProbabilityEngine {
                                  @Value("${bet.engine.token:}") String token) {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(60_000);
+        factory.setReadTimeout(180_000);
         this.client = RestClient.builder().baseUrl(url).requestFactory(factory)
             .defaultHeader("X-Engine-Token", token).build();
     }
@@ -45,6 +45,11 @@ public class HttpProbabilityEngine implements Providers.ProbabilityEngine {
                 item.path("pUpper").isNumber() ? item.path("pUpper").asDouble() : null));
         }
         return new Forecast(body.path("modelVersion").asText(), body.path("modelStatus").asText(), outcomes);
+    }
+
+    @Override
+    public JsonNode sportingAnalysis(Map<String, Object> request) {
+        return client.post().uri("/analysis/football").body(request).retrieve().body(JsonNode.class);
     }
 
     @Override

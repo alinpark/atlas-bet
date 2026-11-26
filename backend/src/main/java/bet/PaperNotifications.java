@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 /** Bulletins de recherche : aucun pari, modèle ou registre financier modifié. */
 @Service
 public class PaperNotifications {
+    @org.springframework.beans.factory.annotation.Autowired
+    private SportAnalysis sports;
     private final JdbcTemplate db;
     private final TelegramOutbox outbox;
     private final RiskService risk;
@@ -56,7 +58,7 @@ public class PaperNotifications {
                 + matches + " match(s) au calendrier aujourd’hui.\n"
                 + (count == 0 ? "Aucun pari retenu en simulation pour le moment."
                     : count + " pari(s) suivi(s) en simulation pour ces matchs.")
-                + "\n\nAtlas compare les cotes entre 60 et 50 minutes avant les matchs."
+                + "\n\n" + sports.telegramSummary()
                 + (outbox.researchAlertsEnabled ? "\nLes alertes de recherche sont des simulations." : "\nLes tests restent dans l’interface : alertes individuelles désactivées.")
                 + "\nAucun avantage rentable démontré : ces tests ne justifient aucune mise."
                 + "\n/paper : gains et pertes fictifs\n/today : voir les matchs";

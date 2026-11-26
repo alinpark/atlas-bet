@@ -58,6 +58,12 @@ public class TeamNews implements Providers.ResultsProvider {
 
     /** Garde-fou : vrai seulement si la composition officielle des deux équipes est publiée. */
     public boolean lineupsConfirmed(String eventId) {
+        if(Boolean.TRUE.equals(db.query("""
+            SELECT s.payload->'context'->>'lineup_status'='CONFIRMED'
+            FROM sport_analysis s JOIN event e ON e.id=s.event_id
+            WHERE s.event_id=? AND s.starts_at=e.starts_at AND s.observed_at>now()-interval '10 minutes'
+            ORDER BY s.observed_at DESC,s.id DESC LIMIT 1
+            """,rs->rs.next()&&rs.getBoolean(1),eventId))) return true;
         return Boolean.TRUE.equals(db.query("SELECT lineups_confirmed FROM team_news WHERE event_id=?",
             rs -> rs.next() && rs.getBoolean(1), eventId));
     }
