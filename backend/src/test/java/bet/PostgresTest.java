@@ -20,7 +20,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * réelles, moteur de probabilités simulé et émulateur Telegram.
  */
 @SpringBootTest(classes = {AtlasBet.class, PostgresTest.Fakes.class}, properties = {
-    "bet.scheduler.enabled=false", "bet.telegram.simulator=true", "bet.telegram.allowed-chat-ids=1000",
+    "bet.scheduler.enabled=false", "bet.telegram.research-alerts-enabled=true", "bet.telegram.simulator=true", "bet.telegram.allowed-chat-ids=1000",
     "spring.security.user.password=test-admin", "bet.odds.provider=fixture"})
 abstract class PostgresTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");

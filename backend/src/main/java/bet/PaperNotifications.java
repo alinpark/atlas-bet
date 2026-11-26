@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/** Notifications descriptives v2 : aucun pari, modèle ou registre financier modifié. */
+/** Bulletins de recherche : aucun pari, modèle ou registre financier modifié. */
 @Service
 public class PaperNotifications {
     private final JdbcTemplate db;
@@ -49,7 +49,7 @@ public class PaperNotifications {
                 WHERE o.experiment_id LIKE 'window-v1:%' AND e.source='odds-api'
                   AND e.status<>'CANCELLED' AND e.starts_at>=? AND e.starts_at<?
                 """, Long.class, Rows.sql(start), Rows.sql(end));
-            String text = "⚽ ATLAS BET · MATCHS DU JOUR\nSimulation — ne mise pas sur ce message.\n\n"
+            String text = "⚽ ATLAS BET · POINT DE RECHERCHE\nAucun conseil de mise dans ce bulletin.\n\n"
                 + (phase.equals("bilan") ? "Fin de journée · " : "Point du ")
                 + day.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH))
                 + " · heure de Paris\n"
@@ -57,13 +57,14 @@ public class PaperNotifications {
                 + (count == 0 ? "Aucun pari retenu en simulation pour le moment."
                     : count + " pari(s) suivi(s) en simulation pour ces matchs.")
                 + "\n\nAtlas compare les cotes entre 60 et 50 minutes avant les matchs."
-                + "\nPas de message de pari = rien à faire."
+                + (outbox.researchAlertsEnabled ? "\nLes alertes de recherche sont des simulations." : "\nLes tests restent dans l’interface : alertes individuelles désactivées.")
+                + "\nAucun avantage rentable démontré : ces tests ne justifient aucune mise."
                 + "\n/paper : gains et pertes fictifs\n/today : voir les matchs";
             Instant expiry = phase.equals("bilan") ? end : day.atTime(23, 0).atZone(Rows.PARIS).toInstant();
             outbox.enqueueUntil("paper:daily:" + day + ":" + phase, null, text, List.of(), expiry);
         }
         publishResults(now);
-        if (Boolean.TRUE.equals(risk.status().get("blocked"))) return;
+        if (!outbox.researchAlertsEnabled || Boolean.TRUE.equals(risk.status().get("blocked"))) return;
         var observations = db.queryForList("""
             SELECT o.id,o.edge,o.created_at,e.starts_at,e.competition AS competition_id,c.name AS competition,
                    hp.name AS home,ap.name AS away,s.outcome,s.price,s.bookmaker,s.updated_at

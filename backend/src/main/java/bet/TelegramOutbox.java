@@ -26,6 +26,8 @@ public class TelegramOutbox {
     private final TelegramClient client;
     private final TelegramClient.Settings settings;
     private final RiskService risk;
+    @org.springframework.beans.factory.annotation.Value("${bet.telegram.research-alerts-enabled:false}")
+    boolean researchAlertsEnabled;
 
     public TelegramOutbox(JdbcTemplate db, ObjectMapper json, TelegramClient client, TelegramClient.Settings settings,
                           RiskService risk) {
@@ -43,7 +45,7 @@ public class TelegramOutbox {
     /** Les observations PAPER et bulletins périmés ne doivent jamais être rejoués après une panne. */
     public void enqueueUntil(String key, Long recommendation, String text, List<List<Button>> keyboard,
                              java.time.Instant expiresAt) {
-        if (demoSuppressed(recommendation)) return;
+        if (demoSuppressed(recommendation) || (key.startsWith("paper:obs:") && !researchAlertsEnabled)) return;
         String payload;
         try {
             var content = new java.util.LinkedHashMap<String, Object>();
@@ -123,6 +125,7 @@ public class TelegramOutbox {
     private String cancelReason(Map<String, Object> row, Map<String, Object> status) {
         if (demoSuppressed((Long) row.get("recommendation_id"))) return "démo désactivée sur le transport réel";
         String key = Rows.text(row, "idempotency_key");
+        if(key.startsWith("paper:obs:") && !researchAlertsEnabled) return "alertes de recherche désactivées : stratégie non validée";
         if (key.startsWith("paper:")) {
             try {
                 var expiry = java.time.Instant.parse(json.readTree(Rows.text(row, "payload")).path("expires_at").asText());

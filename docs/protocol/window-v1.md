@@ -1,5 +1,12 @@
 # Suivi prospectif window-v1 — 24 novembre 2026
 
+**Mise à jour produit du 26 novembre :** les alertes individuelles de recherche
+sont désactivées par défaut (`TELEGRAM_RESEARCH_ALERTS_ENABLED=false`), y compris
+les messages en attente. La collecte, les règles de sélection et les statistiques
+restent inchangées ; le changement n'efface ni les pertes ni les gains. Les bulletins
+et résultats de tests déjà notifiés restent disponibles. Aucune sélection de
+recherche ne doit être présentée comme une recommandation rentable validée.
+
 Ce pilote descriptif remplace la capture market-v2. Les observations et paramètres
 market-v2 sont conservés, leur capture est arrêtée. Aucun mélange entre cohortes.
 Ce protocole n'est pas le protocole historique strict H−60/H−10 différé par l'audit.

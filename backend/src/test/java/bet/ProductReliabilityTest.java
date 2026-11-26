@@ -96,6 +96,19 @@ class ProductReliabilityTest extends PostgresTest {
         assertEquals(1,db.queryForObject("SELECT count(*) FROM telegram_outbox t JOIN telegram_delivery d ON d.outbox_id=t.id WHERE t.idempotency_key LIKE 'paper:result:%'",Integer.class));
     }
 
+    @Test void disablingResearchAlertsPreservesResearchAndCancelsQueuedSignals() {
+        fixture();observatory.capture();notifications.publish();
+        assertEquals(6,db.queryForObject("SELECT count(*) FROM telegram_outbox WHERE idempotency_key LIKE 'paper:obs:%'",Integer.class));
+        outbox.researchAlertsEnabled=false;
+        try {
+            outbox.enqueueUntil("paper:obs:999",null,"should not queue",List.of(),java.time.Instant.now().plusSeconds(100));
+            outbox.dispatch();notifications.publish();
+            assertEquals(6,db.queryForObject("SELECT count(*) FROM research_observation",Integer.class));
+            assertEquals(6,db.queryForObject("SELECT count(*) FROM telegram_outbox WHERE idempotency_key LIKE 'paper:obs:%' AND cancelled_at IS NOT NULL",Integer.class));
+            assertEquals(0,db.queryForObject("SELECT count(*) FROM telegram_delivery d JOIN telegram_outbox t ON t.id=d.outbox_id WHERE t.idempotency_key LIKE 'paper:obs:%'",Integer.class));
+        } finally { outbox.researchAlertsEnabled=true; }
+    }
+
     @Test void archivedObservationsNeverEnterCurrentSimulation() {
         fixture();observatory.capture();db.update("UPDATE research_observation SET experiment_id=replace(experiment_id,'window-v1:','market-v2:')");
         LocalDate today=LocalDate.now(Rows.PARIS);

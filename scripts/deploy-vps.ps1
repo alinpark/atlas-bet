@@ -44,8 +44,8 @@ rm -f /tmp/atlas-bet-release.tgz /tmp/atlas-bet.env
 cd /srv/atlas-bet
 # Ordonnanceur rapide ; le collecteur décide lui-même si une requête est nécessaire.
 # Seules ces options non secrètes sont mises à jour ; aucun accès n'est remplacé.
-sed -i '/^ODDS_PROVIDER=/d; /^SPORTS_COLLECT_INTERVAL_MS=/d; /^ODDS_ADAPTIVE=/d; /^ODDS_MONTHLY_BUDGET=/d; /^SPORTS_ODDS_COMPETITIONS=/d' .env
-printf '\nODDS_PROVIDER=theoddsapi\nSPORTS_COLLECT_INTERVAL_MS=300000\nODDS_ADAPTIVE=true\nODDS_MONTHLY_BUDGET=400\nSPORTS_ODDS_COMPETITIONS=soccer_france_ligue_one,soccer_epl,soccer_germany_bundesliga,soccer_spain_la_liga,soccer_uefa_champs_league,soccer_uefa_europa_league\n' >> .env
+sed -i '/^TELEGRAM_RESEARCH_ALERTS_ENABLED=/d; /^ODDS_PROVIDER=/d; /^SPORTS_COLLECT_INTERVAL_MS=/d; /^ODDS_ADAPTIVE=/d; /^ODDS_MONTHLY_BUDGET=/d; /^SPORTS_ODDS_COMPETITIONS=/d' .env
+printf '\nTELEGRAM_RESEARCH_ALERTS_ENABLED=false\nODDS_PROVIDER=theoddsapi\nSPORTS_COLLECT_INTERVAL_MS=300000\nODDS_ADAPTIVE=true\nODDS_MONTHLY_BUDGET=400\nSPORTS_ODDS_COMPETITIONS=soccer_france_ligue_one,soccer_epl,soccer_germany_bundesliga,soccer_spain_la_liga,soccer_uefa_champs_league,soccer_uefa_europa_league\n' >> .env
 nice -n 10 docker compose build --quiet </dev/null
 docker compose up -d --no-deps --wait backend ai-engine </dev/null
 docker compose ps --format '{{.Service}} {{.Status}}' </dev/null
