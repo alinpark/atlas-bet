@@ -27,6 +27,36 @@ class SimulationApiTest extends PostgresTest {
    assertThrows(ApiException.class,()->simulation.run("DEMO","",date,date,new BigDecimal("-1"),BigDecimal.ONE,BigDecimal.ONE));
    assertThrows(ApiException.class,()->simulation.run("DEMO","",date,date.plusDays(1),new BigDecimal("100"),BigDecimal.ONE,BigDecimal.ONE));
  }
+ /** Stratégie demandée : favori Pinnacle ≤ 1,40, 50 % du capital, plafonds ignorés, argent fictif. */
+ @Test void favouritesStrategyBetsHalfTheCapitalOnShortPricedFavouritesOnly(){
+   db.update("INSERT INTO competition VALUES ('soccer_spain_la_liga','soccer','La Liga') ON CONFLICT DO NOTHING");
+   String[][] games={{"fav-1","1.30","home"},{"fav-2","1.25","home"},{"no-fav","1.90","home"}};
+   for(String[] g:games){
+     db.update("INSERT INTO event VALUES (?,'soccer_spain_la_liga','odds-api',?,now()-interval '3 hours','COMPLETE')",g[0],g[0]);
+     for(String side:new String[]{"home","away"}){
+       db.update("INSERT INTO participant VALUES (?,'soccer',?) ON CONFLICT DO NOTHING",g[0]+side,g[0]+" "+side);
+       db.update("INSERT INTO event_participant VALUES (?,?,?)",g[0],side,g[0]+side);
+     }
+     db.update("""
+       INSERT INTO odds_snapshot(event_id,bookmaker,market,outcome,price,observed_at,updated_at,source)
+       SELECT ?,b,'soccer_h2h',o,p::numeric,now()-interval '4 hours',now()-interval '4 hours','odds-api'
+       FROM (VALUES ('pinnacle','home',?),('pinnacle','draw','5'),('pinnacle','away','9'),
+                    ('winamax_fr','home',?),('betclic_fr','home','1.20')) x(b,o,p)""",g[0],g[1],g[1]);
+   }
+   db.update("INSERT INTO result_snapshot(event_id,source,observed_at,result) VALUES ('fav-1','test',now()-interval '1 hour','{\"winner\":\"home\"}')");
+   db.update("INSERT INTO result_snapshot(event_id,source,observed_at,result) VALUES ('fav-2','test',now()-interval '1 hour','{\"winner\":\"away\"}')");
+   var today=LocalDate.now(Rows.PARIS);
+   var data=simulation.run("FAVORITES","",today.minusDays(1),today,new BigDecimal("200"),new BigDecimal("10"),new BigDecimal("50"));
+   var s=(Map<?,?>)((Map<?,?>)data.get("proportional")).get("summary");
+   assertEquals(2,s.get("candidates"),"le match à 1,90 n'est pas un favori ≤ 1,40");
+   // 200 € : deux mises simultanées de 100 € (50 % du capital total) ; une gagnée à 1,30, une perdue.
+   assertEquals(0,new BigDecimal("200.00").compareTo((BigDecimal)s.get("staked")));
+   assertEquals(0,new BigDecimal("130.00").compareTo((BigDecimal)s.get("capital")));
+   assertTrue(data.get("caveat").toString().contains("argent fictif"));
+   assertThrows(ApiException.class,()->simulation.run("DEMO","",today,today,new BigDecimal("200"),BigDecimal.TEN,new BigDecimal("50")),
+     "50 % reste refusé hors de la stratégie favoris");
+   assertEquals(0,db.queryForObject("SELECT count(*) FROM manual_bet",Integer.class));
+ }
  @Test void researchAndDeliveredUseDistinctEvidenceAndRespectEndDate(){
    pipeline.runOnce();outbox.dispatch();
    String event=db.queryForObject("SELECT id FROM event WHERE competition='demo_soccer'",String.class);

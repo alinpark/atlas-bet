@@ -1,0 +1,648 @@
+{
+ "rules": [
+  "Règles FIXÉES AVANT l'exécution (28/11/2026), argent fictif uniquement :",
+  "- Pari : le favori du marché (cote moyenne la plus basse) si sa cote moyenne ≤ 1,40.",
+  "- Cote obtenue : Bet365 (un vrai bookmaker), cote moyenne si Bet365 manque.",
+  "- Mise : 50 % du capital TOTAL (disponible + mises en cours) au coup d'envoi, dans la limite",
+  "  du disponible : 200 € → deux paris de 100 € (exemple de l'utilisateur), comme le simulateur",
+  "  web. Règlement 2 h après le coup d'envoi.",
+  "- Capital de départ : 200 €. Ruine = capital total < 10 €.",
+  "- Données : 8 championnats (football-data.co.uk), août 2019 → juin 2026, ordre date + heure.",
+  "- Pour ne pas choisir un point de départ flatteur : une série de 3 mois démarrant le 1er",
+  "  de CHAQUE mois (août 2019 → mars 2026), distribution complète publiée.",
+  "- Référence : mêmes paris à 10 € fixes (rendement moyen, sans effet de levier).",
+  "- Variante « Atlas d'accord » : en plus, probabilité du moteur sportif ≥ 70 % sur ce favori,"
+ ],
+ "all_favourites_2019_2026": {
+  "flat_10_eur": {
+   "bets": 2960,
+   "win_rate": 0.7793918918918918,
+   "mean_odds": 1.2655033783783782,
+   "roi": -0.018368243243243255
+  },
+  "three_month_series": {
+   "series": 81,
+   "median_final": 2.23,
+   "ruined_share": 0.8888888888888888,
+   "below_start_share": 0.9629629629629629,
+   "doubled_share": 0.012345679012345678,
+   "best": {
+    "start": "2023-02-01",
+    "final": 2745.93,
+    "bets": 112,
+    "lowest": 200.0,
+    "ruined": false
+   },
+   "worst": {
+    "start": "2019-08-01",
+    "final": 0.0,
+    "bets": 38,
+    "lowest": 0.0,
+    "ruined": true
+   }
+  },
+  "single_run_from_aug_2019": {
+   "final": 0.0,
+   "bets": 38,
+   "lowest": 0.0,
+   "ruined": true
+  }
+ },
+ "season_2025_26": {
+  "flat_10_eur": {
+   "bets": 397,
+   "win_rate": 0.783375314861461,
+   "mean_odds": 1.2807556675062972,
+   "roi": -0.0017884130982367768
+  },
+  "single_run": {
+   "final": 3.58,
+   "bets": 41,
+   "lowest": 3.58,
+   "ruined": true
+  }
+ },
+ "atlas_agrees_2025_26": {
+  "flat_10_eur": {
+   "bets": 201,
+   "win_rate": 0.835820895522388,
+   "mean_odds": 1.228457711442786,
+   "roi": 0.025174129353233824
+  },
+  "single_run": {
+   "final": 8.19,
+   "bets": 119,
+   "lowest": 8.19,
+   "ruined": true
+  }
+ },
+ "series_detail": [
+  {
+   "start": "2019-08-01",
+   "final": 0.0,
+   "bets": 38,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2019-09-01",
+   "final": -0.0,
+   "bets": 39,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2019-10-01",
+   "final": 0.0,
+   "bets": 6,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2019-11-01",
+   "final": 5.21,
+   "bets": 35,
+   "lowest": 5.21,
+   "ruined": true
+  },
+  {
+   "start": "2019-12-01",
+   "final": 8.91,
+   "bets": 27,
+   "lowest": 8.91,
+   "ruined": true
+  },
+  {
+   "start": "2020-01-01",
+   "final": 0.0,
+   "bets": 54,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2020-02-01",
+   "final": 0.01,
+   "bets": 13,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2020-03-01",
+   "final": 54.38,
+   "bets": 18,
+   "lowest": 44.88,
+   "ruined": false
+  },
+  {
+   "start": "2020-04-01",
+   "final": 0.0,
+   "bets": 20,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2020-05-01",
+   "final": 0.0,
+   "bets": 20,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2020-06-01",
+   "final": -0.0,
+   "bets": 14,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2020-07-01",
+   "final": 5.18,
+   "bets": 48,
+   "lowest": 5.18,
+   "ruined": true
+  },
+  {
+   "start": "2020-08-01",
+   "final": 7.52,
+   "bets": 18,
+   "lowest": 7.52,
+   "ruined": true
+  },
+  {
+   "start": "2020-09-01",
+   "final": 12.19,
+   "bets": 54,
+   "lowest": 8.97,
+   "ruined": false
+  },
+  {
+   "start": "2020-10-01",
+   "final": 9.54,
+   "bets": 39,
+   "lowest": 9.54,
+   "ruined": true
+  },
+  {
+   "start": "2020-11-01",
+   "final": -0.0,
+   "bets": 24,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2020-12-01",
+   "final": 5.33,
+   "bets": 20,
+   "lowest": 5.33,
+   "ruined": true
+  },
+  {
+   "start": "2021-01-01",
+   "final": 6.02,
+   "bets": 27,
+   "lowest": 6.02,
+   "ruined": true
+  },
+  {
+   "start": "2021-02-01",
+   "final": 9.4,
+   "bets": 65,
+   "lowest": 7.7,
+   "ruined": true
+  },
+  {
+   "start": "2021-03-01",
+   "final": 7.18,
+   "bets": 46,
+   "lowest": 7.18,
+   "ruined": true
+  },
+  {
+   "start": "2021-04-01",
+   "final": 11.43,
+   "bets": 34,
+   "lowest": 8.93,
+   "ruined": false
+  },
+  {
+   "start": "2021-05-01",
+   "final": 6.79,
+   "bets": 10,
+   "lowest": 6.79,
+   "ruined": true
+  },
+  {
+   "start": "2021-06-01",
+   "final": 9.38,
+   "bets": 31,
+   "lowest": 9.38,
+   "ruined": true
+  },
+  {
+   "start": "2021-07-01",
+   "final": 9.38,
+   "bets": 31,
+   "lowest": 9.38,
+   "ruined": true
+  },
+  {
+   "start": "2021-08-01",
+   "final": 0.01,
+   "bets": 80,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2021-09-01",
+   "final": 0.01,
+   "bets": 46,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2021-10-01",
+   "final": -0.0,
+   "bets": 8,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2021-11-01",
+   "final": 8.02,
+   "bets": 11,
+   "lowest": 8.02,
+   "ruined": true
+  },
+  {
+   "start": "2021-12-01",
+   "final": 0.01,
+   "bets": 23,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2022-01-01",
+   "final": 0.0,
+   "bets": 10,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2022-02-01",
+   "final": 9.5,
+   "bets": 38,
+   "lowest": 9.5,
+   "ruined": true
+  },
+  {
+   "start": "2022-03-01",
+   "final": 8.2,
+   "bets": 76,
+   "lowest": 8.2,
+   "ruined": true
+  },
+  {
+   "start": "2022-04-01",
+   "final": 9.03,
+   "bets": 46,
+   "lowest": 9.03,
+   "ruined": true
+  },
+  {
+   "start": "2022-05-01",
+   "final": 2.23,
+   "bets": 25,
+   "lowest": 2.23,
+   "ruined": true
+  },
+  {
+   "start": "2022-06-01",
+   "final": 1.37,
+   "bets": 42,
+   "lowest": 1.37,
+   "ruined": true
+  },
+  {
+   "start": "2022-07-01",
+   "final": 1.37,
+   "bets": 42,
+   "lowest": 1.37,
+   "ruined": true
+  },
+  {
+   "start": "2022-08-01",
+   "final": 1.03,
+   "bets": 39,
+   "lowest": 1.03,
+   "ruined": true
+  },
+  {
+   "start": "2022-09-01",
+   "final": 9.59,
+   "bets": 25,
+   "lowest": 9.59,
+   "ruined": true
+  },
+  {
+   "start": "2022-10-01",
+   "final": 8.15,
+   "bets": 34,
+   "lowest": 8.15,
+   "ruined": true
+  },
+  {
+   "start": "2022-11-01",
+   "final": 0.0,
+   "bets": 41,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2022-12-01",
+   "final": 0.01,
+   "bets": 14,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2023-01-01",
+   "final": 0.0,
+   "bets": 4,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2023-02-01",
+   "final": 2745.93,
+   "bets": 112,
+   "lowest": 200.0,
+   "ruined": false
+  },
+  {
+   "start": "2023-03-01",
+   "final": 282.93,
+   "bets": 124,
+   "lowest": 90.19,
+   "ruined": false
+  },
+  {
+   "start": "2023-04-01",
+   "final": 39.52,
+   "bets": 101,
+   "lowest": 17.0,
+   "ruined": false
+  },
+  {
+   "start": "2023-05-01",
+   "final": 220.5,
+   "bets": 49,
+   "lowest": 173.64,
+   "ruined": false
+  },
+  {
+   "start": "2023-06-01",
+   "final": 135.28,
+   "bets": 39,
+   "lowest": 34.71,
+   "ruined": false
+  },
+  {
+   "start": "2023-07-01",
+   "final": 28.17,
+   "bets": 73,
+   "lowest": 19.57,
+   "ruined": false
+  },
+  {
+   "start": "2023-08-01",
+   "final": 0.0,
+   "bets": 79,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2023-09-01",
+   "final": 0.01,
+   "bets": 46,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2023-10-01",
+   "final": -0.0,
+   "bets": 6,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2023-11-01",
+   "final": 8.13,
+   "bets": 56,
+   "lowest": 8.13,
+   "ruined": true
+  },
+  {
+   "start": "2023-12-01",
+   "final": 0.0,
+   "bets": 78,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2024-01-01",
+   "final": 0.0,
+   "bets": 23,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2024-02-01",
+   "final": 9.55,
+   "bets": 100,
+   "lowest": 9.55,
+   "ruined": true
+  },
+  {
+   "start": "2024-03-01",
+   "final": 6.74,
+   "bets": 62,
+   "lowest": 6.74,
+   "ruined": true
+  },
+  {
+   "start": "2024-04-01",
+   "final": 9.19,
+   "bets": 24,
+   "lowest": 9.19,
+   "ruined": true
+  },
+  {
+   "start": "2024-05-01",
+   "final": 0.0,
+   "bets": 44,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2024-06-01",
+   "final": 8.63,
+   "bets": 30,
+   "lowest": 8.63,
+   "ruined": true
+  },
+  {
+   "start": "2024-07-01",
+   "final": 8.63,
+   "bets": 30,
+   "lowest": 8.63,
+   "ruined": true
+  },
+  {
+   "start": "2024-08-01",
+   "final": 0.01,
+   "bets": 39,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2024-09-01",
+   "final": 0.01,
+   "bets": 8,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2024-10-01",
+   "final": 0.0,
+   "bets": 2,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2024-11-01",
+   "final": 0.0,
+   "bets": 37,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2024-12-01",
+   "final": 0.0,
+   "bets": 21,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-01-01",
+   "final": -0.0,
+   "bets": 10,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-02-01",
+   "final": -0.0,
+   "bets": 17,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-03-01",
+   "final": 0.0,
+   "bets": 10,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-04-01",
+   "final": 0.01,
+   "bets": 11,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2025-05-01",
+   "final": -0.0,
+   "bets": 16,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-06-01",
+   "final": 3.58,
+   "bets": 41,
+   "lowest": 3.58,
+   "ruined": true
+  },
+  {
+   "start": "2025-07-01",
+   "final": 3.58,
+   "bets": 41,
+   "lowest": 3.58,
+   "ruined": true
+  },
+  {
+   "start": "2025-08-01",
+   "final": 3.58,
+   "bets": 41,
+   "lowest": 3.58,
+   "ruined": true
+  },
+  {
+   "start": "2025-09-01",
+   "final": 0.0,
+   "bets": 26,
+   "lowest": 0.0,
+   "ruined": true
+  },
+  {
+   "start": "2025-10-01",
+   "final": 7.3,
+   "bets": 74,
+   "lowest": 7.3,
+   "ruined": true
+  },
+  {
+   "start": "2025-11-01",
+   "final": 8.05,
+   "bets": 41,
+   "lowest": 8.05,
+   "ruined": true
+  },
+  {
+   "start": "2025-12-01",
+   "final": 6.34,
+   "bets": 38,
+   "lowest": 6.34,
+   "ruined": true
+  },
+  {
+   "start": "2026-01-01",
+   "final": 8.45,
+   "bets": 12,
+   "lowest": 8.45,
+   "ruined": true
+  },
+  {
+   "start": "2026-02-01",
+   "final": 0.01,
+   "bets": 18,
+   "lowest": 0.01,
+   "ruined": true
+  },
+  {
+   "start": "2026-03-01",
+   "final": -0.0,
+   "bets": 68,
+   "lowest": -0.0,
+   "ruined": true
+  },
+  {
+   "start": "2026-04-01",
+   "final": 0.0,
+   "bets": 39,
+   "lowest": 0.0,
+   "ruined": true
+  }
+ ]
+}

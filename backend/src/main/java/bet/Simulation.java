@@ -21,14 +21,32 @@ public class Simulation {
     static void require(boolean valid,String message) { if(!valid) throw new ApiException(HttpStatus.BAD_REQUEST,message); }
 
     public Map<String,Object> run(String source,String competition,LocalDate from,LocalDate to,BigDecimal capital,BigDecimal fixed,BigDecimal percent) {
-        require(Set.of("DELIVERED","RESEARCH","ARCHIVE","MODEL","SPORT","DEMO").contains(source),"Source inconnue");
+        require(Set.of("DELIVERED","RESEARCH","ARCHIVE","MODEL","SPORT","DEMO","FAVORITES").contains(source),"Source inconnue");
+        boolean favorites=source.equals("FAVORITES");
         require(from!=null && to!=null && !to.isBefore(from) && !to.isAfter(LocalDate.now(Rows.PARIS)) && from.plusYears(5).isAfter(to),"Période invalide (maximum 5 ans, sans date future)");
         require(capital!=null && capital.compareTo(BigDecimal.ONE)>=0 && capital.compareTo(new BigDecimal("1000000"))<=0 && capital.scale()<=2,"Capital : 1 à 1 000 000 €, deux décimales maximum");
         require(fixed!=null && fixed.compareTo(new BigDecimal("0.01"))>=0 && fixed.compareTo(capital)<=0 && fixed.scale()<=2,"Mise fixe invalide");
-        require(percent!=null && percent.compareTo(new BigDecimal("0.01"))>=0 && percent.compareTo(new BigDecimal("10"))<=0 && percent.scale()<=2,"Pourcentage : 0,01 à 10 %");
+        // Stratégie « favoris » demandée par l'utilisateur : jusqu'à 50 % du capital, ARGENT FICTIF uniquement.
+        BigDecimal maxPercent=favorites?new BigDecimal("50"):BigDecimal.TEN;
+        require(percent!=null && percent.compareTo(new BigDecimal("0.01"))>=0 && percent.compareTo(maxPercent)<=0 && percent.scale()<=2,
+            "Pourcentage : 0,01 à "+maxPercent.toPlainString()+" %");
         Instant begin=from.atStartOfDay(Rows.PARIS).toInstant(),end=to.plusDays(1).atStartOfDay(Rows.PARIS).toInstant().minusNanos(1);
         Instant now=db.queryForObject("SELECT now()",java.sql.Timestamp.class).toInstant(); if(end.isAfter(now)) end=now;
-        String entries=(source.equals("MODEL")||source.equals("SPORT"))?"""
+        // FAVORITES : pour chaque vrai match, dernier relevé Pinnacle complet au plus tard 10 min avant le
+        // coup d'envoi ; favori = cote Pinnacle la plus basse si ≤ 1,40 ; pari à la meilleure cote FR du même relevé.
+        String entries=favorites?"""
+            SELECT 'FAV-'||e.id AS id,e.id AS event_id,fr.id AS odds_id,fr.observed_at AS at
+            FROM event e
+            JOIN LATERAL (SELECT observed_at AS t FROM odds_snapshot WHERE event_id=e.id AND bookmaker='pinnacle'
+              AND observed_at<=e.starts_at-interval '10 minutes' GROUP BY observed_at HAVING count(DISTINCT outcome)=3
+              ORDER BY observed_at DESC LIMIT 1) last ON true
+            JOIN LATERAL (SELECT outcome,price FROM odds_snapshot WHERE event_id=e.id AND bookmaker='pinnacle'
+              AND observed_at=last.t ORDER BY price,outcome LIMIT 1) fav ON fav.price<=1.40
+            JOIN LATERAL (SELECT id,observed_at FROM odds_snapshot WHERE event_id=e.id AND observed_at=last.t
+              AND outcome=fav.outcome AND bookmaker IN ('betclic_fr','netbet_fr','pmu_fr','unibet_fr','winamax_fr')
+              ORDER BY price DESC,bookmaker LIMIT 1) fr ON true
+            WHERE e.source='odds-api'
+            """:(source.equals("MODEL")||source.equals("SPORT"))?"""
             SELECT 'MODEL-'||b.id AS id,s.event_id,o.odds_id,b.created_at AS at
             FROM paper_bet b JOIN opportunity o ON o.id=b.opportunity_id JOIN odds_snapshot s ON s.id=o.odds_id
             JOIN event e ON e.id=s.event_id JOIN prediction p ON p.id=o.prediction_id
@@ -58,9 +76,13 @@ public class Simulation {
         require(rows.size()<=20000,"Plus de 20 000 propositions : réduisez la période");
         var candidates=rows.stream().map(r->new Candidate(Rows.text(r,"id"),Rows.text(r,"event_id"),Rows.text(r,"competition"),Rows.text(r,"home"),Rows.text(r,"away"),Rows.text(r,"outcome"),Rows.text(r,"bookmaker"),Rows.decimal(r,"price"),Rows.instant(r,"at"),Rows.instant(r,"starts_at"),Rows.instant(r,"resolved"),Rows.text(r,"winner"),Boolean.TRUE.equals(r.get("cancelled")),source.equals("DEMO")||Observatory.fresh(r,Rows.instant(r,"at"),15))).toList();
         var policy=risk.status();var limits=new Limits(Rows.decimal(policy,"max_stake"),Rows.decimal(policy,"max_exposure"),Rows.decimal(policy,"max_daily_loss"),Rows.decimal(policy,"cap"));
+        if(favorites) {
+            // Simulation de la stratégie telle que demandée : plafonds ignorés, jamais appliquée à de l'argent réel.
+            BigDecimal none=new BigDecimal("1000000000");limits=new Limits(none,none,none,none);
+        }
         return Map.of("source",source,"from",from,"to",to,"as_of",end,"limits",limits,
             "fixed",replay(candidates,capital,fixed,false,limits,begin,end),"proportional",replay(candidates,capital,percent,true,limits,begin,end),
-            "caveat","Mises calculées selon vos règles, pas des montants historiquement proposés par Atlas. Limites actuelles appliquées à toute la période ; pauses historiques non reconstituées. Cotes enregistrées à la détection, disponibilité chez le bookmaker non garantie. Les gains ne rechargent pas les plafonds de pertes. Capital total = disponible + mises ouvertes à leur coût ; aucune valorisation en direct. Aucun pari placé.");
+            "caveat",(favorites?"STRATÉGIE « FAVORIS, 50 % DU CAPITAL » : argent fictif, plafonds de risque volontairement ignorés pour montrer la stratégie telle quelle. Historique 2019-2026 : 72 % des séries de 3 mois ruinées (voir docs/validation/LEVERAGE_50_SIMULATION.json). ":"")+"Mises calculées selon vos règles, pas des montants historiquement proposés par Atlas. Limites actuelles appliquées à toute la période ; pauses historiques non reconstituées. Cotes enregistrées à la détection, disponibilité chez le bookmaker non garantie. Les gains ne rechargent pas les plafonds de pertes. Capital total = disponible + mises ouvertes à leur coût ; aucune valorisation en direct. Aucun pari placé.");
     }
     static class Open {
         Candidate c;BigDecimal stake;Map<String,Object> row;
