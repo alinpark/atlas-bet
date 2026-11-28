@@ -27,6 +27,33 @@ Rapport reproductible : [SPORT_MODEL_V1.json](validation/SPORT_MODEL_V1.json), c
 - Le repos statistique est celui du championnat ; le repos toutes compétitions et la rotation sont présentés séparément. L'Elo est principalement domestique : les confrontations entre championnats en coupes restent un domaine non calibré. Certaines équipes européennes ne disposent pas des huit matchs et tirs requis.
 - Les sources publiques gratuites peuvent changer sans préavis. FotMob n'est pas une API contractuelle. Pas de contournement de blocage : timeout, cache négatif, signalement et abstention. Cache compressé limité à 32 Mio/512 réponses, compatible avec le conteneur de 256 Mio ; aucune dépendance payante ajoutée.
 
+## Comparaison au marché — 28 novembre 2026 (Claude)
+
+Protocole fixé avant exécution : `research/market_benchmark.py`, rapport
+[SPORT_VS_MARKET.json](validation/SPORT_VS_MARKET.json). Coefficients gelés, mêmes
+caractéristiques que l'entraînement ; marché = Pinnacle avant match sans marge.
+Étalonnage d'un mélange modèle/marché sur 2025-01 → 2025-06 (1 401 matchs), test sur
+2025-07 → 2026-06 (1 132 matchs ayant toutes les cotes nécessaires).
+
+| Mesure (test) | Résultat |
+|---|---|
+| Log loss | moteur 0,971 ; **marché 0,955** |
+| Poids optimal du moteur dans le mélange | **0** : il n'ajoute rien aux cotes |
+| Parier le favori du moteur, cote moyenne | 1 132 paris, ROI **−5,7 %** [IC95 −11,0 ; −0,4] |
+| Parier les « valeurs » (Bet365 ≥ 3 % au-dessus du mélange) | 40 paris, ROI −67 %, cote moyenne 10,3 → **NON VALIDÉ** |
+
+Lecture : le moteur est meilleur qu'une référence naïve (log loss 0,990 contre 1,078) mais
+moins précis que les bookmakers. Suivre son favori perd la marge du bookmaker. Les
+« valeurs » détectées sont des outsiders et des nuls à grosse cote : le retrait
+proportionnel de la marge surestime les issues improbables (biais favori/outsider), ce qui
+explique aussi les tests sur des nuls (Real–PSV, Sabah–Barcelone, PSG–Roma).
+
+Conséquence produit : Telegram montre désormais, pour chaque match, l'avis d'Atlas **à côté**
+de celui des bookmakers (probabilité Pinnacle sans marge, meilleure cote française, cotes de
+moins de 6 h) et un verdict en une phrase (d'accord / Atlas plus optimiste sans preuve /
+Atlas moins confiant), suivi du bilan historique ci-dessus. Mise conseillée : 0 €.
+Aucun seuil, aucun protocole de recherche et aucun statut de modèle n'ont été modifiés.
+
 ## Suite de validation, déjà rendue mesurable
 
 Les nouvelles analyses sont figées avant match. Le modèle reste `UNVALIDATED` et sans bornes de probabilité calibrées. Une validation future devra comparer la base et l'ajustement d'effectif sur les mêmes matchs prospectifs, vérifier la calibration par compétition, puis mesurer les résultats nets aux cotes réellement disponibles. Les seuils de risque existants restent applicables. L'absence de preuve est une raison de ne pas conseiller de mise, pas de sélectionner une cote plus élevée.

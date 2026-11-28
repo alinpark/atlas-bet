@@ -19,6 +19,7 @@ public class SportAnalysis {
     private final ObjectMapper json;
     private final Providers.ProbabilityEngine engine;
     private final TransactionTemplate tx;
+    @org.springframework.beans.factory.annotation.Autowired private MarketView market;
     @Value("${bet.scheduler.enabled:true}") private boolean scheduled;
     @Value("${bet.sport.enabled:true}") private boolean enabled;
 
@@ -106,16 +107,20 @@ public class SportAnalysis {
             WHERE e.source='odds-api' AND e.status='SCHEDULED' AND e.starts_at>now()
               AND e.starts_at<now()+interval '2 days' ORDER BY e.starts_at LIMIT 20
             """);
-        StringBuilder text=new StringBuilder("⚽ LECTURE SPORTIVE D’ATLAS\nStatistiques d’abord, cotes ensuite.\n");
+        StringBuilder text=new StringBuilder("⚽ LECTURE SPORTIVE D’ATLAS\nL’avis d’Atlas, puis celui des bookmakers.\n");
         int count=0;
+        Instant now=db.queryForObject("SELECT now()",java.sql.Timestamp.class).toInstant();
         for(var e:events) {
             var a=latest(Rows.text(e,"id"));
             if(!"ANALYZED".equals(a.path("status").asText())||a.path("stale").asBoolean()||a.path("historical").asBoolean()) continue;
+            String lean=a.path("lean").asText();
+            double atlas=a.path("probabilities").path(lean).asDouble();
             text.append("\n").append(e.get("home")).append(" – ").append(e.get("away"))
                 .append("\n").append(Rows.paris(Rows.instant(e,"starts_at"))).append(" (Paris)")
-                .append("\nTendance : ").append(Reports.outcomeLabel(e,a.path("lean").asText()))
-                .append(" ≈ ").append(Math.round(a.path("probabilities").path(a.path("lean").asText()).asDouble()*100)).append(" %")
-                .append("\nForme (5 matchs) : ").append(a.path("stats").path("home").path("form").asText())
+                .append("\nAtlas : ").append(Reports.outcomeLabel(e,lean))
+                .append(" ≈ ").append(Math.round(atlas*100)).append(" %");
+            for(String line:MarketView.lines(atlas,market.view(Rows.text(e,"id"),lean,now))) text.append("\n").append(line);
+            text.append("\nForme (5 matchs) : ").append(a.path("stats").path("home").path("form").asText())
                 .append(" / ").append(a.path("stats").path("away").path("form").asText());
             var ctx=a.path("context");
             text.append("\nCompositions : ").append("CONFIRMED".equals(ctx.path("lineup_status").asText())?"confirmées par la source":"officielles attendues");
@@ -130,6 +135,7 @@ public class SportAnalysis {
             text.append("\n");if(++count==3) break;
         }
         if(count==0) text.append("\nAucune analyse complète et récente disponible pour les prochaines 48 h.\n");
-        return text.append("\nV = victoire, N = nul, D = défaite ; du plus ancien au plus récent.\nTendances expérimentales, pas des paris conseillés. Mise conseillée : 0 €.\nDossiers, raisons et sources dans Atlas Bet. /paper : simulations.").toString();
+        return text.append("\nV = victoire, N = nul, D = défaite ; du plus ancien au plus récent.\n\n")
+            .append(MarketView.BENCHMARK).append("\nCe sont des avis, pas des paris conseillés.").toString();
     }
 }

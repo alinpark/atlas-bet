@@ -76,4 +76,37 @@ class SportAnalysisTest extends PostgresTest {
         assertTrue(message.contains("65 %"));assertTrue(message.contains("0 €"));assertTrue(message.contains("pas des paris conseillés"));
         assertTrue(message.length()<3000);
     }
+
+    /** Demande utilisateur : voir l'avis d'Atlas À CÔTÉ de celui des bookmakers, avec un verdict simple. */
+    @Test void telegramComparesAtlasWithBookmakersAndStatesTheHistoricalRecord() {
+        Instant start=fixture();sports.save(id,start,payload(start));String message=sports.telegramSummary();
+        // Pinnacle 2 / 4 / 4 → 50 % sans marge ; meilleure cote française 2,2 chez Winamax.
+        assertTrue(message.contains("Atlas : "),message);
+        assertTrue(message.contains("Bookmakers : ≈ 50 % (meilleure cote 2,2 chez Winamax)"),message);
+        assertTrue(message.contains("plus optimiste (+15 points)"),message);
+        assertTrue(message.contains("1 132 matchs") && message.contains("5,7 %"),message);
+        assertTrue(message.contains("Mise conseillée : 0 €"),message);
+        assertFalse(message.contains("winamax_fr"),message);
+    }
+
+    @Test void telegramSaysWhenBookmakerOddsAreNotYetCollected() {
+        Instant start=fixture();sports.save(id,start,payload(start));
+        db.update("DELETE FROM odds_snapshot WHERE event_id=?",id);
+        assertTrue(sports.telegramSummary().contains("Bookmakers : cotes pas encore relevées"));
+        db.update("""
+            INSERT INTO odds_snapshot(event_id,bookmaker,market,outcome,price,observed_at,updated_at,source)
+            SELECT ?,'pinnacle','soccer_h2h',o,p,now()-interval '7 hours',now()-interval '7 hours','odds-api'
+            FROM (VALUES ('home',2),('draw',4),('away',4)) x(o,p)""",id);
+        assertTrue(sports.telegramSummary().contains("Bookmakers : cotes pas encore relevées"),
+            "une cote de plus de 6 h n'est pas présentée comme l'avis actuel du marché");
+    }
+
+    @Test void verdictWordingCoversAgreementAndLowerConfidence() {
+        var market=new MarketView.View(.62,new java.math.BigDecimal("1.5500"),"betclic_fr",Instant.now());
+        var agree=MarketView.lines(.65,market);
+        assertEquals("Bookmakers : ≈ 62 % (meilleure cote 1,55 chez Betclic)",agree.get(0));
+        assertTrue(agree.get(1).contains("d’accord"));
+        assertTrue(MarketView.lines(.50,market).get(1).contains("moins confiant que les bookmakers (-12 points)"));
+        assertEquals(1,MarketView.lines(.5,null).size());
+    }
 }
